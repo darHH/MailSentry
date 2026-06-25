@@ -17,7 +17,7 @@
 - [x] `manifest.json` (MV3): permissions `storage`, `activeTab`, `scripting`; host permission `*://*.mail.google.com/*`; register `content.js`, `background.js`, popup, onboarding
 - [x] `.gitignore` — exclude any local key/config file (never commit API keys)
 - [x] `README.md` skeleton — load-unpacked instructions placeholder
-- [ ] **Acquire Google Safe Browsing API key** — console.cloud.google.com → enable Safe Browsing API → create key → restrict by API + referrer *(USER task — needs Google console access; pipeline runs stub-first until entered)*
+- [x] **Acquire Google Safe Browsing API key** — DONE by user (paste into popup → stored in `chrome.storage.local`, read by `linkScanner`). Never committed.
 - [ ] *(stretch)* Acquire OpenAI API key for the GPT-4o layer *(USER task)*
 - [x] **OPEN DECISION #1 — banner styling:** RESOLVED → inline scoped CSS inside Shadow DOM (Tailwind CDN blocked by MV3 CSP). (CONTEXT §8)
 - [ ] **OPEN DECISION #2 — demo mode:** deferred by user; revisit before Phase 5. (CONTEXT §8)
@@ -49,11 +49,12 @@
 
 > Depends on Phase 1 utils + open decision #1. Keep all DOM selectors behind small helper fns so a Gmail update breaks only one file.
 
-- [ ] `content.js` DOM parser: extract sender/domain, subject, body text, body links, attachment indicators, `<img>` tags (for QR)
-- [ ] Orchestrator: run all 5 checks → compute composite via `risk.js`
-- [ ] Banner injection: red (≥ 0.3) / green check, with score + per-signal breakdown tooltip
-- [ ] One-click **Verify** → look up vendor in whitelist → surface on-file phone number
-- [ ] Scoped styling (Shadow DOM / inline CSS) to avoid Gmail CSS collisions
+- [x] `content.js` DOM parser: extract sender/domain, subject, body text, body links, attachment indicators, `<img>` tags (for QR) — all selectors isolated in `SELECTORS` + `get*` helpers (one BRITTLE ZONE block)
+- [x] Orchestrator: run all 5 checks → compute composite via `risk.js` (verified offline: attack→red 70%, clean→green 0%)
+- [x] Banner injection: red (≥ 0.3) / green check, with score + per-signal breakdown tooltip (`<details>` table)
+- [x] One-click **Verify** → look up vendor in whitelist (exact / lookalike / display-name match) → surface on-file phone number
+- [x] Scoped styling (Shadow DOM / inline CSS) to avoid Gmail CSS collisions
+- [ ] **LIVE TUNING (needs real Gmail):** confirm Gmail selectors (`h2.hP`, `span.gD[email]`, `div.a3s`, `span.aV3`) resolve on your account; adjust BRITTLE ZONE if banner doesn't appear
 
 ## Phase 4 — Stretch (only after core is solid)
 
