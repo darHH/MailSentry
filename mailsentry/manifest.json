@@ -32,7 +32,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "MailSentry",
+    "default_title": "MailSentry — Scam protection for Gmail",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",
