@@ -35,9 +35,12 @@ function renderVendors(vendors) {
     meta.className = 'meta';
     const b = document.createElement('b');
     b.textContent = v.name || vendorEntry(v);
-    const span = document.createElement('span');
-    span.textContent = vendorEntry(v);
-    meta.append(b, span);
+    meta.append(b);
+    if (v.name) { // only show the entry line separately when a name labels it
+      const span = document.createElement('span');
+      span.textContent = vendorEntry(v);
+      meta.append(span);
+    }
     const del = document.createElement('button');
     del.className = 'danger';
     del.textContent = '×';
@@ -69,6 +72,7 @@ async function removeVendor(i) {
 // ---- Allowlist mode (single unified entries list) ----
 function renderAllowlist(allowlist) {
   $('allowToggle').checked = !!allowlist.enabled;
+  $('strictWarn').classList.toggle('show', !!allowlist.enabled);
   const ul = $('allowList');
   ul.innerHTML = '';
   if (allowlist.entries.length === 0) ul.innerHTML = '<li><span class="muted">Nothing allowed yet.</span></li>';
@@ -101,12 +105,24 @@ const addEntry = () => {
 };
 const removeEntry = (i) => saveAllowlist((a) => a.entries.splice(i, 1));
 
-// ---- API keys ----
+// ---- API keys + live status ----
+function renderKeyStatus(settings) {
+  const hasKey = !!(settings.safeBrowsingKey || '').trim();
+  const pill = $('scanPill');
+  pill.classList.toggle('on', hasKey);
+  pill.classList.toggle('off', !hasKey);
+  $('scanText').textContent = hasKey ? 'Link scan: live' : 'Link scan: off';
+  $('keyState').innerHTML = hasKey
+    ? '<b>Live.</b> Links in emails are checked against Google Safe Browsing.'
+    : '<b>Off.</b> No key yet — links aren’t scanned. Sender, urgency and attachment checks still run.';
+}
+
 async function saveKeys() {
   const { settings } = await getState();
   settings.safeBrowsingKey = $('sbKey').value.trim();
   settings.openaiKey = $('oaKey').value.trim();
   await chrome.storage.local.set({ settings });
+  renderKeyStatus(settings);
   $('keysSaved').textContent = 'Saved ✓';
   setTimeout(() => ($('keysSaved').textContent = ''), 1500);
 }
@@ -118,6 +134,7 @@ async function saveKeys() {
   renderAllowlist(state.allowlist);
   $('sbKey').value = state.settings.safeBrowsingKey || '';
   $('oaKey').value = state.settings.openaiKey || '';
+  renderKeyStatus(state.settings);
 
   $('addVendor').addEventListener('click', addVendor);
   $('allowToggle').addEventListener('change', toggleAllow);

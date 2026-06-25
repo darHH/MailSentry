@@ -5,98 +5,180 @@
   <title>MailSentry</title>
   <style>
     * { box-sizing: border-box; }
+    :root {
+      --blue: #2563eb; --ink: #111827; --muted: #6b7280; --line: #e8eaed;
+      --bg: #f7f8fa; --card: #fff; --red: #b91c1c; --green: #047857;
+    }
     body {
-      margin: 0;
-      width: 360px;
+      margin: 0; width: 380px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      color: #111827;
-      background: #fff;
-      font-size: 13px;
+      color: var(--ink); background: var(--bg); font-size: 13px; line-height: 1.45;
     }
+
+    /* Header + live status strip */
     header {
-      display: flex; align-items: center; gap: 8px;
-      padding: 12px 14px; border-bottom: 1px solid #eef0f3;
-      font-weight: 700; font-size: 15px;
+      display: flex; align-items: center; gap: 9px;
+      padding: 13px 16px 12px; background: var(--card); border-bottom: 1px solid var(--line);
     }
-    header .shield { color: #2563eb; }
-    .section { padding: 12px 14px; border-bottom: 1px solid #eef0f3; }
-    .section h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; }
-    .row { display: flex; gap: 6px; margin-bottom: 6px; }
+    header .shield { font-size: 18px; }
+    header .brand { font-weight: 700; font-size: 16px; letter-spacing: -.01em; }
+    header .brand small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); letter-spacing: 0; }
+    .status {
+      display: flex; gap: 8px; padding: 9px 16px; background: var(--card);
+      border-bottom: 1px solid var(--line); font-size: 11.5px;
+    }
+    .pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: 999px; font-weight: 600;
+    }
+    .pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .pill.on { background: #ecfdf5; color: var(--green); }
+    .pill.on .dot { background: #10b981; }
+    .pill.off { background: #fff7ed; color: #b45309; }
+    .pill.off .dot { background: #f59e0b; }
+
+    /* Cards */
+    .card { background: var(--card); margin: 10px 10px 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .card:last-of-type { margin-bottom: 10px; }
+    .card-head { padding: 12px 14px 0; }
+    .card-head.with-toggle { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    h3 { margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+    h3 .ic { font-size: 15px; }
+    .what { color: var(--muted); font-size: 12px; margin: 5px 0 0; }
+    .body { padding: 10px 14px 14px; }
+
+    /* Example hint box */
+    .examples { margin: 8px 0 10px; border-radius: 8px; background: #f3f6fc; border: 1px solid #e2eafc; padding: 8px 10px; }
+    .examples .ex { display: flex; gap: 8px; align-items: baseline; font-size: 12px; margin: 2px 0; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #eef1f6; border: 1px solid #e1e5ec; border-radius: 4px; padding: 1px 5px; font-size: 11.5px; color: #1f2937; white-space: nowrap; }
+    .ex span { color: var(--muted); }
+
+    /* Inputs */
+    .row { display: flex; gap: 6px; }
+    .row.stack { flex-direction: column; }
     input[type=text], input[type=password] {
-      flex: 1; padding: 7px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px;
+      flex: 1; min-width: 0; padding: 8px 9px; border: 1px solid #d1d5db;
+      border-radius: 7px; font-size: 13px; font-family: inherit;
     }
+    input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
     button {
-      background: #2563eb; color: #fff; border: none; border-radius: 6px;
-      padding: 7px 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+      background: var(--blue); color: #fff; border: none; border-radius: 7px;
+      padding: 8px 13px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
     }
-    button.ghost { background: #f3f4f6; color: #374151; }
-    button.danger { background: transparent; color: #b91c1c; padding: 2px 6px; font-weight: 700; }
-    ul.list { list-style: none; margin: 0; padding: 0; }
+    button:hover { background: #1d4ed8; }
+    button.danger { background: transparent; color: #9ca3af; padding: 2px 6px; font-weight: 700; font-size: 15px; }
+    button.danger:hover { color: var(--red); background: transparent; }
+
+    /* Lists */
+    ul.list { list-style: none; margin: 0 0 10px; padding: 0; }
+    ul.list:empty { display: none; }
     ul.list li {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 6px 8px; background: #f9fafb; border: 1px solid #eef0f3;
-      border-radius: 6px; margin-bottom: 5px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 7px 9px; background: var(--bg); border: 1px solid var(--line);
+      border-radius: 8px; margin-bottom: 5px;
     }
-    ul.list li .meta { display: flex; flex-direction: column; }
+    ul.list li .meta { display: flex; flex-direction: column; min-width: 0; }
     ul.list li .meta b { font-size: 13px; }
-    ul.list li .meta span { color: #6b7280; font-size: 11px; }
-    .toggle { display: flex; align-items: center; justify-content: space-between; }
-    .muted { color: #6b7280; font-size: 11px; margin: 2px 0 8px; }
-    .saved { color: #047857; font-size: 11px; margin-left: 8px; }
-    label.switch { position: relative; display: inline-block; width: 38px; height: 22px; }
+    ul.list li .meta span { color: var(--muted); font-size: 11px; font-family: ui-monospace, Menlo, monospace; overflow: hidden; text-overflow: ellipsis; }
+    .muted { color: var(--muted); }
+
+    /* Toggle switch */
+    label.switch { position: relative; display: inline-block; width: 40px; height: 23px; flex: 0 0 auto; }
     label.switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute; cursor: pointer; inset: 0; background: #cbd5e1;
-      border-radius: 22px; transition: .2s;
-    }
-    .slider::before {
-      content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px;
-      background: #fff; border-radius: 50%; transition: .2s;
-    }
-    input:checked + .slider { background: #2563eb; }
-    input:checked + .slider::before { transform: translateX(16px); }
+    .slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 23px; transition: .2s; }
+    .slider::before { content: ""; position: absolute; height: 17px; width: 17px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+    input:checked + .slider { background: var(--blue); }
+    input:checked + .slider::before { transform: translateX(17px); }
+
+    /* Strict-mode warning + key state */
+    .warn { display: none; margin: 0 0 10px; padding: 8px 10px; border-radius: 8px;
+      background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 12px; }
+    .warn.show { display: block; }
+    .keystate { font-size: 11.5px; margin-top: 8px; }
+    .keystate b { font-weight: 600; }
+    .saved { color: var(--green); font-size: 12px; font-weight: 600; }
+    .foot { padding: 10px 16px 14px; text-align: center; }
+    .foot a { color: var(--blue); text-decoration: none; font-size: 11.5px; }
   </style>
 </head>
 <body>
-  <header><span class="shield">&#128737;</span> MailSentry</header>
+  <header>
+    <span class="shield">&#128737;&#65039;</span>
+    <span class="brand">MailSentry<small>Scam protection for Gmail</small></span>
+  </header>
 
-  <div class="section">
-    <h3>Vendors (whitelist)</h3>
-    <p class="muted">Checked for lookalikes. Enter <b>@domain</b> (e.g. <code>@acme.com</code> → catches lookalike domains) or a <b>full email</b> (e.g. <code>jo@gmail.com</code> → catches username lookalikes). Name optional.</p>
-    <ul class="list" id="vendorList"></ul>
-    <div class="row">
-      <input type="text" id="vName" placeholder="Name (optional)" />
-      <input type="text" id="vEntry" placeholder="@acme.com or jo@gmail.com" />
-      <button id="addVendor">Add</button>
+  <div class="status">
+    <span class="pill on"><span class="dot"></span> Protecting Gmail</span>
+    <span class="pill" id="scanPill"><span class="dot"></span> <span id="scanText">Link scan: off</span></span>
+  </div>
+
+  <!-- TRUSTED CONTACTS ------------------------------------------------ -->
+  <div class="card">
+    <div class="card-head">
+      <h3><span class="ic">&#129309;</span> Trusted contacts</h3>
+      <p class="what">People and companies you deal with. MailSentry warns you when a scammer uses a <b>look-alike</b> of one of these addresses.</p>
+    </div>
+    <div class="body">
+      <div class="examples">
+        <div class="ex"><code>@acme.com</code><span>a whole company — flags <code>@acrne.com</code></span></div>
+        <div class="ex"><code>jo@gmail.com</code><span>one person — flags <code>jp@gmail.com</code></span></div>
+      </div>
+      <ul class="list" id="vendorList"></ul>
+      <div class="row stack">
+        <input type="text" id="vName" placeholder="Name (optional, e.g. Acme Supplies)" />
+        <div class="row">
+          <input type="text" id="vEntry" placeholder="@acme.com  or  jo@gmail.com" />
+          <button id="addVendor">Add</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="toggle">
-      <h3 style="margin:0">Allowlist mode</h3>
+  <!-- STRICT MODE ----------------------------------------------------- -->
+  <div class="card">
+    <div class="card-head with-toggle">
+      <div>
+        <h3><span class="ic">&#128274;</span> Strict mode</h3>
+        <p class="what">Flag <b>every</b> sender that isn’t on the list below. Best if you only ever email a fixed set of suppliers.</p>
+      </div>
       <label class="switch"><input type="checkbox" id="allowToggle" /><span class="slider"></span></label>
     </div>
-    <p class="muted">Strict: flag every sender NOT on this list. Same format — <code>@acme.com</code> (whole domain) or <code>jo@acme.com</code> (one address). Default off.</p>
-    <ul class="list" id="allowList"></ul>
-    <div class="row">
-      <input type="text" id="allowInput" placeholder="@acme.com or jo@acme.com" />
-      <button id="addAllow">Add</button>
+    <div class="body">
+      <div class="warn" id="strictWarn">Strict mode is <b>on</b> — anyone not listed here will be flagged, including new genuine contacts.</div>
+      <div class="examples">
+        <div class="ex"><code>@acme.com</code><span>allow everyone at that domain</span></div>
+        <div class="ex"><code>jo@acme.com</code><span>allow just that one address</span></div>
+      </div>
+      <ul class="list" id="allowList"></ul>
+      <div class="row">
+        <input type="text" id="allowInput" placeholder="@acme.com  or  jo@acme.com" />
+        <button id="addAllow">Add</button>
+      </div>
     </div>
   </div>
 
-  <div class="section">
-    <h3>API keys</h3>
-    <p class="muted">Safe Browsing enables live link/QR scanning. Empty = stub mode.</p>
-    <div class="row">
-      <input type="password" id="sbKey" placeholder="Safe Browsing API key" />
+  <!-- LINK SCANNING (API KEYS) ---------------------------------------- -->
+  <div class="card">
+    <div class="card-head">
+      <h3><span class="ic">&#128279;</span> Link scanning</h3>
+      <p class="what">Optional. Add a free <b>Google Safe Browsing</b> key to check links in emails against known scam sites. Without it, every other check still runs.</p>
     </div>
-    <div class="row">
-      <input type="password" id="oaKey" placeholder="OpenAI key (optional, GPT-4o)" />
+    <div class="body">
+      <div class="row stack">
+        <input type="password" id="sbKey" placeholder="Google Safe Browsing API key" />
+        <input type="password" id="oaKey" placeholder="OpenAI key — optional, for AI explanations" />
+        <div class="row">
+          <button id="saveKeys">Save</button>
+          <span class="saved" id="keysSaved"></span>
+        </div>
+      </div>
+      <div class="keystate muted" id="keyState"></div>
     </div>
-    <div class="row">
-      <button id="saveKeys">Save keys</button>
-      <span class="saved" id="keysSaved"></span>
-    </div>
+  </div>
+
+  <div class="foot">
+    <a href="https://example.com/mailsentry-privacy" target="_blank" rel="noopener">Privacy policy</a>
+    &nbsp;·&nbsp; Email content never leaves your device
   </div>
 
   <script src="popup.js"></script>
