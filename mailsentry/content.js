@@ -3,9 +3,8 @@
 // below, so a Gmail markup change breaks only this file (ideally only this block).
 //
 // Flow: detect an opened email → parse it → run the 5 checks → compute composite
-// (risk.js) → inject a Shadow-DOM banner (red >=0.3 / green) with a per-signal
-// breakdown + one-click Verify that confirms a saved-contact match or names the
-// real contact a lookalike sender is impersonating.
+// (risk.js) → inject a Shadow-DOM banner (red >=0.3 / green) with a plain-language
+// per-check breakdown explaining why it was flagged.
 
 (function () {
   'use strict';
@@ -94,9 +93,9 @@
     });
   }
 
-  // Find the real vendor the sender is impersonating / matching, for Verify.
-  // Mirrors lookalikeSignal granularity: full-email vendors match on whole address,
-  // domain vendors match on registrable domain.
+  // Find the real vendor the sender is impersonating / matching, so the breakdown
+  // can name it. Mirrors lookalikeSignal granularity: full-email vendors match on
+  // whole address, domain vendors match on registrable domain.
   function matchVendor(parsed, vendors) {
     const root = Domain.rootDomain(parsed.domain);
     const sAddr = parsed.address || '';
@@ -320,18 +319,6 @@
         .chk.ok .ci { color: #16a34a; }
         .chk.off .ci { color: #9ca3af; }
         .chk.off .ct, .chk.off .cn { color: #6b7280; }
-        .verify {
-          margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-        }
-        button {
-          background: #2563eb; color: #fff; border: none; border-radius: 7px;
-          padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer;
-        }
-        .vinfo {
-          display: none; font-size: 13px; color: #111827;
-          background: #fff; border: 1px solid #d1d5db; border-radius: 7px; padding: 6px 10px;
-        }
-        .vinfo b { color: #2563eb; }
         .note { font-size: 11px; color: #92400e; margin-top: 8px; }
       </style>
       <div class="bar">
@@ -350,28 +337,8 @@
           ${mainReason}
           <div class="checks">${rowsHtml}</div>
         </details>
-        <div class="verify">
-          <button id="verifyBtn">Verify sender</button>
-          <span class="vinfo" id="verifyOut"></span>
-        </div>
       </div>
     `;
-
-    shadow.getElementById('verifyBtn').addEventListener('click', () => {
-      const out = shadow.getElementById('verifyOut');
-      out.style.display = 'inline-block';
-      if (vendorMatch && vendorMatch.vendor) {
-        const v = vendorMatch.vendor;
-        const real = esc(Domain.vendorIdentity(v).email || Domain.vendorIdentity(v).domain);
-        if (vendorMatch.kind === 'lookalike') {
-          out.innerHTML = `This is NOT your saved contact <b>${esc(v.name)}</b> (real: <b>${real}</b>). Reach them through a contact you already trust — not anything in this email.`;
-        } else {
-          out.innerHTML = `Matches your saved contact <b>${esc(v.name)}</b> (<b>${real}</b>). Still confirm out-of-band for any payment change.`;
-        }
-      } else {
-        out.innerHTML = 'No matching saved contact. Add this sender in the MailSentry popup if you trust them.';
-      }
-    });
 
     emailEl.parentNode.insertBefore(host, emailEl);
   }

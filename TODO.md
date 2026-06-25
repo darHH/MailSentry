@@ -52,7 +52,7 @@
 - [x] `content.js` DOM parser: extract sender/domain, subject, body text, body links, attachment indicators, `<img>` tags (for QR) — all selectors isolated in `SELECTORS` + `get*` helpers (one BRITTLE ZONE block)
 - [x] Orchestrator: run all 5 checks → compute composite via `risk.js` (verified offline: attack→red 70%, clean→green 0%)
 - [x] Banner injection: red (≥ 0.3) / green check, with score + per-signal breakdown tooltip (`<details>` table)
-- [x] One-click **Verify** → look up vendor in whitelist (exact / lookalike match) → confirm saved-contact match or name the real contact being impersonated (phone field removed)
+- [x] ~~One-click **Verify** button~~ — REMOVED by user. Impersonation info (real contact being mimicked) now surfaced inline in the breakdown via `matchVendor()`; no separate button.
 - [x] Scoped styling (Shadow DOM / inline CSS) to avoid Gmail CSS collisions
 - [ ] **LIVE TUNING (needs real Gmail):** confirm Gmail selectors (`h2.hP`, `span.gD[email]`, `div.a3s`, `span.aV3`) resolve on your account; adjust BRITTLE ZONE if banner doesn't appear
 
