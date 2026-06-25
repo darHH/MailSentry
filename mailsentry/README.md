@@ -2,7 +2,7 @@
 
 A Chrome extension that lives inside Gmail and makes email scams impossible to miss at the exact moment a payment decision is made. Fully client-side — email content never leaves the device.
 
-See `../CONTEXT.md` for the full project brief and `../TODO.md` for the task list.
+**New here? See [`../SETUP.md`](../SETUP.md) for full step-by-step setup.** See `../CONTEXT.md` for the project brief and `../TODO.md` for the task list.
 
 ## Load unpacked (demo)
 
