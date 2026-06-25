@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MailSentry — Privacy policy</title>
+  <!-- inline scoped CSS only; no remote CDN (MV3 CSP). -->
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      display: flex;
+      justify-content: center;
+      padding: 32px 24px 64px;
+    }
+    .card {
+      background: #fff;
+      max-width: 720px;
+      width: 100%;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 32px;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+    .logo .shield { color: #2563eb; font-size: 22px; }
+    .tagline { color: #6b7280; font-size: 14px; margin: 0 0 8px; }
+    .effective { color: #6b7280; font-size: 12px; margin: 0 0 24px; }
+    h2 {
+      font-size: 16px;
+      margin: 24px 0 8px;
+      color: #111827;
+    }
+    p, li {
+      font-size: 14px;
+      line-height: 1.55;
+      color: #374151;
+    }
+    ul { padding-left: 22px; margin: 6px 0 12px; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid #eef0f3;
+      vertical-align: top;
+    }
+    th { background: #f9fafb; color: #111827; font-weight: 600; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    .pitch {
+      background: #f0f9ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 16px 0;
+      font-size: 14px;
+      color: #1e3a8a;
+    }
+    a { color: #2563eb; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo"><span class="shield">&#128737;</span> MailSentry</div>
+    <p class="tagline">Privacy policy</p>
+    <p class="effective">Effective 2026-06-26</p>
+
+    <p>MailSentry is a Chrome extension that flags likely scam emails inside Gmail. It is designed so the contents of your inbox never leave your machine.</p>
+
+    <h2>What MailSentry reads from your Gmail</h2>
+    <p>When you have an email open in Gmail, MailSentry reads the following from the page <b>locally, inside your browser</b>:</p>
+    <ul>
+      <li>Sender email address and display name</li>
+      <li>Subject line</li>
+      <li>Body text (scanned for urgency/pressure keywords)</li>
+      <li>Links inside the body (<code>&lt;a href&gt;</code> URLs)</li>
+      <li>Attachment filenames (presence and type only)</li>
+      <li>Images in the body (for QR-code decoding)</li>
+    </ul>
+
+    <h2>What leaves your device</h2>
+    <table>
+      <thead>
+        <tr><th>Data</th><th>Where it goes &amp; why</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>URLs extracted from the email body and QR codes</td>
+          <td>Sent to the <b>Google Safe Browsing API</b> to check against known phishing and malware lists. The URL itself is the only data sent — no sender, subject, body, or attachment information is included. Requires you to provide your own Safe Browsing API key in the popup; without a key, no URLs are sent.</td>
+        </tr>
+        <tr>
+          <td>Everything else</td>
+          <td>Nothing else leaves your machine.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>What stays on your device</h2>
+    <p>All of the following processing happens entirely inside your browser, with no external API call:</p>
+    <ul>
+      <li>Levenshtein (lookalike-domain) comparison against your saved contacts</li>
+      <li>Urgency keyword scoring of the subject and body</li>
+      <li>Attachment-on-payment-email check</li>
+      <li>QR-code decoding (when enabled in a future build)</li>
+      <li>Composite risk score and the plain-language banner shown above the email</li>
+    </ul>
+
+    <h2>What MailSentry never does</h2>
+    <ul>
+      <li>No MailSentry server. There is no backend that receives your email data.</li>
+      <li>No analytics, telemetry, or usage tracking.</li>
+      <li>No account, no sign-up, no identifiers.</li>
+      <li>No selling, sharing, or storage of email content anywhere.</li>
+      <li>No reading of emails you have not opened.</li>
+    </ul>
+
+    <h2>What is stored, and where</h2>
+    <p>MailSentry uses <code>chrome.storage.local</code> on your own device to store:</p>
+    <ul>
+      <li>Your trusted-contacts list (the vendors/emails you add in the popup)</li>
+      <li>Your allowlist entries and on/off toggle</li>
+      <li>Your Google Safe Browsing API key (if you entered one)</li>
+      <li>Whether you accepted the first-run consent screen</li>
+    </ul>
+    <p>This data stays on your machine. Uninstalling the extension removes it.</p>
+
+    <div class="pitch">
+      We designed MailSentry client-side specifically so you never have to trust us with your inbox. The only data that ever leaves your device is the URLs we ask Google Safe Browsing to check — and you control whether that happens by choosing whether to add a Safe Browsing key.
+    </div>
+
+    <h2>Third-party service used</h2>
+    <p><b>Google Safe Browsing</b> — Google's URL reputation service. When MailSentry sends a URL to this API, it is subject to Google's data handling for that service. See <a href="https://safebrowsing.google.com/" target="_blank" rel="noopener">safebrowsing.google.com</a> for details.</p>
+
+    <h2>Contact</h2>
+    <p>MailSentry is an open-source hackathon project. Questions and issues: <a href="https://github.com/darHH/MailSentry/issues" target="_blank" rel="noopener">github.com/darHH/MailSentry/issues</a>.</p>
+  </main>
+</body>
+</html>

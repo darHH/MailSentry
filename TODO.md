@@ -59,7 +59,7 @@
 ## Phase 4 — Stretch (only after core is solid)
 
 - [x] ~~`utils/openai.js` — GPT-4o `explain()` — domain pair only, plain-English explanation, one call per flagged email~~ — **SKIPPED (2026-06-26):** `buildChecks()` in `content.js` already produces a plain-English sentence per check (deterministic, no hallucination risk). Adding an LLM layer would (1) duplicate existing explanations, (2) weaken the privacy pitch by POSTing email content to a third party, (3) introduce a demo-day failure mode (rate limits, flaky wifi, revoked key). No added user value for a hackathon. Revisit only if an AI-specific prize/track requires it.
-- [ ] Privacy policy page (GitHub Pages doc) + link it from onboarding
+- [x] Privacy policy page + link it from onboarding — bundled as `mailsentry/privacy.html` (extension-local instead of GitHub Pages, so it works offline and can't 404 mid-demo); `onboarding.html` "Privacy policy" link now points to it
 - [ ] Demo fallback mode (depends on open decision #2)
 
 ## Phase 5 — Demo prep
