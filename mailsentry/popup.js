@@ -52,8 +52,11 @@ function renderVendors(vendors) {
 }
 
 async function addVendor() {
-  const name = $('vName').value.trim();
-  const entry = $('vEntry').value.trim().toLowerCase();
+  let name = $('vName').value.trim();
+  let entry = $('vEntry').value.trim().toLowerCase();
+  // Safety net: if the user typed the address/domain into the Name box and left
+  // the entry box empty, treat the Name as the entry (it's what matters).
+  if (!entry && /[@.]/.test(name)) { entry = name.toLowerCase(); name = ''; }
   if (!entry) return;
   const { vendors } = await getState();
   vendors.push(name ? { name, entry } : { entry });
