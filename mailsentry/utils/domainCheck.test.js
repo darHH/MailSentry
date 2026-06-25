@@ -62,5 +62,35 @@ eq(r.score, 1.0, 'allowlist violation → composite 1.0');
 r = domainScore('"Acme Supplies" <pay@acrne-supplies.com>', { vendors, allowlist: { enabled: false } });
 eq(r.score, 1.0, 'lookalike still fires with allowlist off');
 
+// --- ADDRESS-LEVEL lookalike (full-email vendors) ---
+// vendor stored as a full email (in either the email or domain field)
+const emailVendors = [
+  { name: 'W Nayar', email: 'wnaya@rocketmail.com', phone: '+65 9000 0000' },
+  { name: 'W Nayar (typed in domain field)', domain: 'wnaya@rocketmail.com' },
+];
+// 1-char username diff on the SAME domain → now flags
+r = domainScore('<wnayar@rocketmail.com>', { vendors: emailVendors });
+eq(r.signals.lookalike, 1.0, 'address-level: wnayar vs wnaya (d=1) fires');
+eq(r.score, 1.0, 'address-level lookalike → composite 1.0');
+// exact full-address match → safe
+r = domainScore('<wnaya@rocketmail.com>', { vendors: emailVendors });
+eq(r.signals.lookalike, 0, 'address-level: exact email is safe');
+// genuinely different person, same freemail domain → NOT flagged (no false positive)
+r = domainScore('<johnathan@rocketmail.com>', { vendors: emailVendors });
+eq(r.signals.lookalike, 0, 'address-level: unrelated local-part not flagged');
+// full-email vendor must NOT make every rocketmail.com sender a domain-lookalike
+r = domainScore('<someone@hotmail.com>', { vendors: emailVendors });
+eq(r.signals.lookalike, 0, 'address-level: different domain, no false domain-lookalike');
+
+// domain vendors and email vendors coexist
+const mixed = [
+  { name: 'Acme', domain: 'acme-supplies.com' },
+  { name: 'W Nayar', email: 'wnaya@rocketmail.com' },
+];
+r = domainScore('<pay@acrne-supplies.com>', { vendors: mixed });
+eq(r.signals.lookalike, 1.0, 'mixed: domain lookalike still fires');
+r = domainScore('<wnayar@rocketmail.com>', { vendors: mixed });
+eq(r.signals.lookalike, 1.0, 'mixed: email lookalike still fires');
+
 console.log(`domainCheck: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

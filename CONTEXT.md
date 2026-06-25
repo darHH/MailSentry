@@ -43,7 +43,10 @@ The five checks:
 
 **Sender/Domain sub-signals** (the 0.40 weight is the *max* of these — any one firing high flags the email):
 
-1. **Lookalike (Levenshtein).** Fuzzy-match sender domain against known-vendor domains; a near-match (1–2 char diff) = lookalike attack (e.g. `acme.com` vs `acrne.com`).
+1. **Lookalike (Levenshtein), adaptive granularity.** Fuzzy-match the sender against known vendors; a 1–2 char near-match = lookalike attack. Granularity depends on how the vendor is stored:
+   - Vendor stored as a **domain** (`acme-supplies.com`) → compare *registrable domains* → catches lookalike-domain BEC (`acme.com` vs `acrne.com`). This is the primary B2B threat.
+   - Vendor stored as a **full email** (`wnaya@rocketmail.com`, in the email or domain field) → compare *whole addresses* → catches *username* impersonation on shared/freemail domains (`wnaya@` vs `wnayar@rocketmail.com`).
+   - Rationale: B2B fraud spoofs the company (domain); local-parts vary legitimately (`billing@`/`accounts@`), so domain-only is right there. Personal/freemail contacts share a domain and their identity is the local-part, so those need address-level. `domainCheck.vendorIdentity()` decides per vendor; an exact match (domain or address) is treated as the real sender → safe.
 2. **Display-name vs email mismatch.** Compare the sender's *display name* against its *actual email address*. If the display name claims a known vendor/brand but the address domain is unrelated (e.g. `"Acme Supplies" <random123@gmail.com>`), flag. Catches the case where the address itself isn't a lookalike — the attacker just sets a convincing display name on a throwaway inbox.
 3. **Allowlist mode (optional, user toggle).** When enabled, *only* senders matching a whitelisted **domain suffix** (e.g. `@acme.com`, `@*.acme.com`) **or** an explicit whitelisted **email address** pass. Any sender outside the allowlist scores high. This is a strict opt-in mode for finance users who only ever correspond with a known set of suppliers — flips the model from "flag the suspicious" to "flag everything not pre-approved."
 

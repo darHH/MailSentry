@@ -94,15 +94,25 @@
   }
 
   // Find the real vendor the sender is impersonating / matching, for Verify.
+  // Mirrors lookalikeSignal granularity: full-email vendors match on whole address,
+  // domain vendors match on registrable domain.
   function matchVendor(parsed, vendors) {
     const root = Domain.rootDomain(parsed.domain);
+    const sAddr = parsed.address || '';
     let exact = null, near = null, nearDist = 99;
     for (const v of vendors) {
-      const vroot = Domain.rootDomain(v.domain);
-      if (!vroot) continue;
-      if (root && root === vroot) { exact = v; break; }
-      const d = Lev.levenshtein(root, vroot);
-      if (d <= 2 && d < nearDist) { near = v; nearDist = d; }
+      const id = Domain.vendorIdentity(v);
+      if (id.email) {
+        if (sAddr && sAddr === id.email) { exact = v; break; }
+        const d = Lev.levenshtein(sAddr, id.email);
+        if (d <= 2 && d < nearDist) { near = v; nearDist = d; }
+      } else if (id.domain) {
+        const vroot = Domain.rootDomain(id.domain);
+        if (!vroot) continue;
+        if (root && root === vroot) { exact = v; break; }
+        const d = Lev.levenshtein(root, vroot);
+        if (d <= 2 && d < nearDist) { near = v; nearDist = d; }
+      }
     }
     if (exact) return { vendor: exact, kind: 'exact' };
     if (near) return { vendor: near, kind: 'lookalike' };

@@ -1,6 +1,10 @@
 // domainCheck.js — sender/domain score (the 0.40-weight signal).
 // score = max of three independent sub-signals. Any one firing high flags the email:
-//   1. Lookalike      — Levenshtein 1-2 char diff vs a known-vendor domain
+//   1. Lookalike      — Levenshtein 1-2 char diff vs a known vendor. ADAPTIVE:
+//                       vendor stored as a DOMAIN (acme.com)        → compare domains
+//                       vendor stored as a FULL EMAIL (a@b.com)     → compare whole addresses
+//                       (lets it catch username impersonation on shared/freemail domains,
+//                        e.g. wnaya@rocketmail.com vs wnayar@rocketmail.com)
 //   2. Name mismatch  — display name claims a known vendor/brand, address domain unrelated
 //   3. Allowlist mode — (opt-in) sender not on the allowed suffix/email list
 //
@@ -56,17 +60,40 @@
       .filter((t) => t.length >= 3); // drop noise like "co", "pte", "&"
   }
 
-  /** Sub-signal 1: lookalike domain via Levenshtein. */
-  function lookalikeSignal(domain, vendors) {
-    const root = rootDomain(domain);
-    if (!root) return 0;
+  // Normalise a stored vendor into { email, domain }. Tolerates a full email typed
+  // into the `domain` field (common user mistake / intentional for personal contacts).
+  function vendorIdentity(v) {
+    let email = (v.email || '').toLowerCase().trim();
+    let domain = (v.domain || '').toLowerCase().trim();
+    if (!email && domain.includes('@')) { email = domain; domain = ''; }
+    if (!domain && email.includes('@')) domain = email.split('@')[1];
+    return { email, domain };
+  }
+
+  /**
+   * Sub-signal 1: lookalike via Levenshtein. Adaptive granularity per vendor:
+   *   full-email vendor → compare the WHOLE address (catches username typo-squat)
+   *   domain vendor     → compare registrable domains (catches lookalike domains)
+   */
+  function lookalikeSignal(parsed, vendors) {
+    const sAddr = parsed.address || '';
+    const sRoot = rootDomain(parsed.domain);
     let worst = 0;
     for (const v of vendors || []) {
-      const vroot = rootDomain(v.domain);
-      if (!vroot) continue;
-      const d = levenshtein(root, vroot);
-      if (d === 0) return 0; // exact match → it IS the vendor, safe on this signal
-      if (d >= 1 && d <= 2) worst = Math.max(worst, 1.0);
+      const id = vendorIdentity(v);
+      if (id.email) {
+        // address-level: e.g. wnaya@rocketmail.com vs wnayar@rocketmail.com (d=1)
+        if (!sAddr) continue;
+        if (sAddr === id.email) return 0; // exact → it IS the vendor, safe
+        const d = levenshtein(sAddr, id.email);
+        if (d >= 1 && d <= 2) worst = Math.max(worst, 1.0);
+      } else if (id.domain) {
+        const vroot = rootDomain(id.domain);
+        if (!vroot || !sRoot) continue;
+        if (sRoot === vroot) return 0; // exact domain → it IS the vendor, safe
+        const d = levenshtein(sRoot, vroot);
+        if (d >= 1 && d <= 2) worst = Math.max(worst, 1.0);
+      }
     }
     return worst;
   }
@@ -84,7 +111,7 @@
       // display name claims this vendor if it contains all the vendor's significant tokens
       const claims = vToks.every((t) => nameToks.has(t));
       if (!claims) continue;
-      const vroot = rootDomain(v.domain);
+      const vroot = rootDomain(vendorIdentity(v).domain);
       // claims the vendor but the domain is neither the vendor's nor a near-lookalike of it
       const d = levenshtein(root, vroot);
       if (d > 2) return 1.0;
@@ -135,7 +162,7 @@
           };
 
     const signals = {
-      lookalike: lookalikeSignal(parsed.domain, vendors),
+      lookalike: lookalikeSignal(parsed, vendors),
       nameMismatch: nameMismatchSignal(parsed.displayName, parsed.domain, vendors),
       allowlist: allowlistSignal(parsed.address, parsed.domain, allowlist),
     };
@@ -144,7 +171,7 @@
     return { score, signals, parsed };
   }
 
-  const api = { domainScore, parseSender, rootDomain };
+  const api = { domainScore, parseSender, rootDomain, vendorIdentity };
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
