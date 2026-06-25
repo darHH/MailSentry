@@ -30,3 +30,7 @@ node mailsentry/utils/attachmentCheck.test.js
 ## Project status
 
 Phase 0 (scaffold) + Phase 1 (pure utils) + Phase 2 (extension shell) done. Phase 3 (Gmail integration) next. See `../TODO.md`.
+
+## Attribution
+
+Toolbar/extension icons in `icons/` are derived from the Twemoji 🛡 emoji (U+1F6E1). Twemoji is © Twitter, Inc. and other contributors, licensed [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/). Source: https://github.com/jdecked/twemoji

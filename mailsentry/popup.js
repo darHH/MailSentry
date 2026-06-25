@@ -65,8 +65,13 @@ async function removeVendor(i) {
 
 // ---- Allowlist mode (single unified entries list) ----
 function renderAllowlist(allowlist) {
-  $('allowToggle').checked = !!allowlist.enabled;
-  $('strictWarn').classList.toggle('show', !!allowlist.enabled);
+  const on = !!allowlist.enabled;
+  $('allowToggle').checked = on;
+  $('strictWarn').classList.toggle('show', on);
+  const pill = $('strictPill');
+  pill.classList.toggle('on', on);
+  pill.classList.toggle('off', !on);
+  $('strictText').textContent = on ? 'Strict mode: on' : 'Strict mode: off';
   const ul = $('allowList');
   ul.innerHTML = '';
   if (allowlist.entries.length === 0) ul.innerHTML = '<li><span class="muted">Nothing allowed yet.</span></li>';
