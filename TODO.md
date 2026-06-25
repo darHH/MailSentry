@@ -68,3 +68,10 @@
 - [ ] README: full setup instructions for judges (load unpacked, enter key, open test email)
 - [ ] Rehearse the flow incl. consent-screen trust moment
 - [ ] Finalise open decision #2 (demo mode) and lock the demo script
+
+---
+
+## Ideas / future improvements (not scheduled)
+
+- [ ] **Stronger email + QR analysis layer.** Add a second, more reliable detection pass beyond keyword/Levenshtein — e.g. wire up the real jsQR decode (currently stubbed), and consider an AI/heuristic content check for scam intent. Goal: fewer misses, fewer false negatives.
+- [ ] **Import / export trusted contacts + allowlist.** Let a user export their lists to a file and import them, so colleagues in the same company can share one vetted set of contacts/allowlist instead of each building it from scratch.
