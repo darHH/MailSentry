@@ -54,7 +54,7 @@
 - [x] Banner injection: red (≥ 0.3) / green check, with score + per-signal breakdown tooltip (`<details>` table)
 - [x] ~~One-click **Verify** button~~ — REMOVED by user. Impersonation info (real contact being mimicked) now surfaced inline in the breakdown via `matchVendor()`; no separate button.
 - [x] Scoped styling (Shadow DOM / inline CSS) to avoid Gmail CSS collisions
-- [ ] **LIVE TUNING (needs real Gmail):** confirm Gmail selectors (`h2.hP`, `span.gD[email]`, `div.a3s`, `span.aV3`) resolve on your account; adjust BRITTLE ZONE if banner doesn't appear
+- [x] **LIVE TUNING (needs real Gmail):** confirm Gmail selectors (`h2.hP`, `span.gD[email]`, `div.a3s`, `span.aV3`) resolve on your account; adjust BRITTLE ZONE if banner doesn't appear — user confirmed banner renders on real Gmail; no selector changes needed
 
 ## Phase 4 — Stretch (only after core is solid)
 
