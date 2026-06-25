@@ -1,0 +1,9 @@
+{
+  "vendors": [
+    { "name": "Acme Supplies", "domain": "acme-supplies.com", "phone": "+65 6123 4567" },
+    { "name": "Lion City Logistics", "domain": "lioncitylogistics.com", "phone": "+65 6234 5678" },
+    { "name": "Marina Office Solutions", "domain": "marinaoffice.sg", "phone": "+65 6345 6789" },
+    { "name": "Tanjong Print Works", "domain": "tanjongprint.com", "phone": "+65 6456 7890" },
+    { "name": "Raffles Industrial", "domain": "rafflesindustrial.com.sg", "phone": "+65 6567 8901" }
+  ]
+}

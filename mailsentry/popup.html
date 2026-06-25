@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MailSentry</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 360px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #111827;
+      background: #fff;
+      font-size: 13px;
+    }
+    header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 14px; border-bottom: 1px solid #eef0f3;
+      font-weight: 700; font-size: 15px;
+    }
+    header .shield { color: #2563eb; }
+    .section { padding: 12px 14px; border-bottom: 1px solid #eef0f3; }
+    .section h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; }
+    .row { display: flex; gap: 6px; margin-bottom: 6px; }
+    input[type=text], input[type=password] {
+      flex: 1; padding: 7px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px;
+    }
+    button {
+      background: #2563eb; color: #fff; border: none; border-radius: 6px;
+      padding: 7px 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    button.ghost { background: #f3f4f6; color: #374151; }
+    button.danger { background: transparent; color: #b91c1c; padding: 2px 6px; font-weight: 700; }
+    ul.list { list-style: none; margin: 0; padding: 0; }
+    ul.list li {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 8px; background: #f9fafb; border: 1px solid #eef0f3;
+      border-radius: 6px; margin-bottom: 5px;
+    }
+    ul.list li .meta { display: flex; flex-direction: column; }
+    ul.list li .meta b { font-size: 13px; }
+    ul.list li .meta span { color: #6b7280; font-size: 11px; }
+    .toggle { display: flex; align-items: center; justify-content: space-between; }
+    .muted { color: #6b7280; font-size: 11px; margin: 2px 0 8px; }
+    .saved { color: #047857; font-size: 11px; margin-left: 8px; }
+    label.switch { position: relative; display: inline-block; width: 38px; height: 22px; }
+    label.switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; inset: 0; background: #cbd5e1;
+      border-radius: 22px; transition: .2s;
+    }
+    .slider::before {
+      content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%; transition: .2s;
+    }
+    input:checked + .slider { background: #2563eb; }
+    input:checked + .slider::before { transform: translateX(16px); }
+  </style>
+</head>
+<body>
+  <header><span class="shield">&#128737;</span> MailSentry</header>
+
+  <div class="section">
+    <h3>Vendors (whitelist)</h3>
+    <p class="muted">Known suppliers checked for lookalike domains. Verify surfaces their phone.</p>
+    <ul class="list" id="vendorList"></ul>
+    <div class="row">
+      <input type="text" id="vName" placeholder="Name" />
+      <input type="text" id="vDomain" placeholder="domain.com" />
+    </div>
+    <div class="row">
+      <input type="text" id="vPhone" placeholder="Phone (optional)" />
+      <button id="addVendor">Add</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="toggle">
+      <h3 style="margin:0">Allowlist mode</h3>
+      <label class="switch"><input type="checkbox" id="allowToggle" /><span class="slider"></span></label>
+    </div>
+    <p class="muted">Strict: flag every sender NOT on the allowed suffix/email list. Default off.</p>
+    <ul class="list" id="suffixList"></ul>
+    <div class="row">
+      <input type="text" id="suffixInput" placeholder="acme.com or *.acme.com" />
+      <button id="addSuffix">Add</button>
+    </div>
+    <ul class="list" id="emailList"></ul>
+    <div class="row">
+      <input type="text" id="emailInput" placeholder="person@acme.com" />
+      <button id="addEmail">Add</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>API keys</h3>
+    <p class="muted">Safe Browsing enables live link/QR scanning. Empty = stub mode.</p>
+    <div class="row">
+      <input type="password" id="sbKey" placeholder="Safe Browsing API key" />
+    </div>
+    <div class="row">
+      <input type="password" id="oaKey" placeholder="OpenAI key (optional, GPT-4o)" />
+    </div>
+    <div class="row">
+      <button id="saveKeys">Save keys</button>
+      <span class="saved" id="keysSaved"></span>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

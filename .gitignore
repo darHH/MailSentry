@@ -1,0 +1,18 @@
+# Never commit API keys or local secrets
+*.key
+*.pem
+secrets.json
+config.local.json
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Node (in case tooling is added later)
+node_modules/
+npm-debug.log*

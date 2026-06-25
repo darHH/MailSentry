@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "MailSentry",
+  "version": "1.0.0",
+  "description": "Makes email scams impossible to miss at the moment a payment decision is made — client-side scam checks inside Gmail.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["*://*.mail.google.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.mail.google.com/*"],
+      "js": [
+        "utils/levenshtein.js",
+        "utils/domainCheck.js",
+        "utils/urgency.js",
+        "utils/linkScanner.js",
+        "utils/attachmentCheck.js",
+        "utils/qrExtractor.js",
+        "utils/risk.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MailSentry"
+  },
+  "options_page": "onboarding.html",
+  "web_accessible_resources": [
+    {
+      "resources": ["onboarding.html", "demo/seed.json"],
+      "matches": ["*://*.mail.google.com/*"]
+    }
+  ]
+}
