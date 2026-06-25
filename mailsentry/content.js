@@ -163,8 +163,6 @@
     if (old) old.remove();
   }
 
-  function pct(n) { return Math.round(n * 100); }
-
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -300,7 +298,6 @@
         .top { display: flex; align-items: center; gap: 10px; }
         .icon { font-size: 20px; }
         .title { font-weight: 700; font-size: 14px; color: ${isRed ? '#b91c1c' : '#047857'}; }
-        .score { margin-left: auto; font-size: 12px; color: #6b7280; }
         .msg { font-size: 13px; margin: 6px 0 0; line-height: 1.45; }
         details { margin-top: 10px; }
         summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #2563eb; }
@@ -320,7 +317,6 @@
         <div class="top">
           <span class="icon">${isRed ? '&#9888;&#65039;' : '&#9989;'}</span>
           <span class="title">${isRed ? 'Possible scam — verify before acting' : 'No scam indicators detected'}</span>
-          <span class="score">risk ${pct(result.composite)}%</span>
         </div>
         <p class="msg">
           ${isRed

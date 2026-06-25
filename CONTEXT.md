@@ -114,18 +114,28 @@ No backend. No auth. No database. Everything client-side except URL reputation l
 
 ## 5. Composite score formula
 
+Two-tier model:
+
 ```js
-// All scores normalised 0–1. Weights sum to 1.0.
-const compositeScore = (
-  domainScore     * 0.40 +   // max of: lookalike (Levenshtein) | display-name↔email mismatch | allowlist-mode violation
-  urgencyScore    * 0.25 +   // Weighted keyword density in subject + body
-  linkScore       * 0.20 +   // Google Safe Browsing result on extracted URLs (max across all links)
-  attachmentScore * 0.10 +   // Binary: attachment present on payment-instruction email → 0.5, else 0
-  qrScore         * 0.05     // Extracted QR URL passed through same link scanner
+// Ground-truth override. Google Safe Browsing's blocklist has near-zero
+// false-positive rate, so a hit on either a body link OR a decoded QR URL
+// forces composite = 1.0 — heuristics can't vote it down.
+const safeBrowsingHit = (linkScore >= 1.0) || (qrScore >= 1.0);
+
+// Heuristic fallback. Weighted sum of the three heuristic signals only
+// (link/qr live in the override above, not in this sum). Weights sum to 1.0.
+const weightedSum = (
+  domainScore     * 0.55 +   // max of: lookalike (Levenshtein) | display-name↔email mismatch | allowlist-mode violation
+  urgencyScore    * 0.30 +   // Weighted keyword density in subject + body
+  attachmentScore * 0.15     // Binary: attachment present on payment-instruction email → 0.5, else 0
 );
 
-// Threshold: score >= 0.3 → red banner. Below → green check.
-// Show score and per-signal breakdown in banner tooltip.
+const composite = safeBrowsingHit ? 1.0 : weightedSum;
+
+// Threshold: composite >= 0.3 → red banner. Below → green check.
+// Banner shows the verdict + per-signal breakdown rows; the numeric risk % is
+// computed internally but no longer rendered in the banner UI (implementation
+// detail with no calibration story — the red/green label + reasons carry the UX).
 ```
 
 Google Safe Browsing call (free API; key at console.cloud.google.com → Safe Browsing API):
@@ -230,6 +240,6 @@ mailsentry/
 
 **Util module pattern:** each util is a UMD-ish IIFE — attaches to a `Mail*` global (for content-script use) AND `module.exports` (for Node tests). Tests are zero-dep `*.test.js` plain asserts; run `node mailsentry/utils/<name>.test.js` or loop all with `for t in *.test.js; do node "$t"; done`. Network/DOM modules take injectable `fetch`/`jsQR`/`document` for testability.
 
-**Next step:** Phase 3 fully done (live tuning confirmed 2026-06-26). **Phase 4 LLM explain layer SKIPPED (2026-06-26)** — `buildChecks()` already produces a plain-English row per check deterministically, so an LLM call would duplicate existing output, weaken the privacy pitch, and add a demo-day failure mode; all OpenAI/GPT-4o references then removed from code and docs. **Phase 4 privacy policy page DONE (2026-06-26)** — bundled as `mailsentry/privacy.html` (extension-local instead of GitHub Pages, robust offline) and wired into the onboarding "Privacy policy" link. Real next work: Phase 5 demo prep (2 test emails: clean + lookalike attack), resolve open decision #2 (demo fallback mode), and close the local-part-on-trusted-domain detection gap (`noreply-team@trusted.com` style — current pipeline doesn't catch it; candidate sub-signal in `domainCheck.js`).
+**Next step:** Phase 3 fully done (live tuning confirmed 2026-06-26). **Phase 4 LLM explain layer SKIPPED (2026-06-26)** — `buildChecks()` already produces a plain-English row per check deterministically, so an LLM call would duplicate existing output, weaken the privacy pitch, and add a demo-day failure mode; all OpenAI/GPT-4o references then removed from code and docs. **Phase 4 privacy policy page DONE (2026-06-26)** — bundled as `mailsentry/privacy.html` (extension-local instead of GitHub Pages, robust offline) and wired into the onboarding "Privacy policy" link. **Risk formula reworked (2026-06-26)** — link/qr removed from the weighted sum and reframed as a Safe Browsing ground-truth override (hit → composite 1.0), heuristic weights rescaled to 0.55/0.30/0.15 (domain/urgency/attachment), and the numeric risk % removed from the visible banner UI (verdict label + breakdown rows carry the UX). 34/34 risk tests pass. Known follow-up: `linkScanner.js` silently treats 4xx Safe Browsing responses as "no hit" — should surface the error so users don't see a false green when their key is invalid. Real next work: Phase 5 demo prep (2 test emails: clean + lookalike attack), resolve open decision #2 (demo fallback mode), fix the silent-error bug, and close the local-part-on-trusted-domain detection gap.
 
 > When you finish a work session, update this section: what got done, what's in progress, and the single clearest "next step."
