@@ -28,7 +28,7 @@ A Chrome extension that lives inside Gmail — no new tab, no dashboard.
 1. Parses **sender domain, body text, links, attachments, and QR codes** from every opened email.
 2. Runs **five independent checks** and combines them into one **composite risk score** (0–1).
 3. Injects a **red/green banner** directly into the Gmail UI *before* the user acts.
-4. **One-click Verify** surfaces the supplier's on-file phone number for an out-of-band call.
+4. **One-click Verify** confirms whether the sender matches a saved contact and, if it's a lookalike, names the real contact it's impersonating — prompting an out-of-band check.
 5. **Fully client-side** — no email content leaves the device (only URLs go to the Safe Browsing API).
 
 The five checks:
@@ -174,7 +174,7 @@ mailsentry/
     qrExtractor.js               jsQR decode + pass to linkScanner
     risk.js                      composite score formula
     openai.js                    GPT-4o explain() — optional/stretch
-  demo/seed.json                 5 vendors: { name, domain, phone }
+  demo/seed.json                 5 vendors: { name, domain }
   README.md                      setup instructions for judges
 ```
 
@@ -223,11 +223,11 @@ mailsentry/
 - ✅ **Open decision #1 RESOLVED** → Shadow DOM + inline scoped CSS.
 - ✅ **Safe Browsing key acquired** (user). Entered via popup → `chrome.storage.local.settings.safeBrowsingKey`, read by `linkScanner`. Never committed. OpenAI key (stretch) still optional/unset.
 - ✅ **Phase 2 extension shell done** — `background.js` (idempotent `onInstalled` seed of vendors/allowlist/settings from `demo/seed.json`, opens onboarding on first install), `onboarding.html`+`onboarding.js` (consent screen, exact §3 copy, checkbox-gated Enable, persists `settings.consentAccepted`), `popup.html`+`popup.js` (vendor whitelist add/remove, allowlist-mode toggle + suffix/email managers, Safe Browsing + OpenAI key settings — all persisted to `chrome.storage.local`). All JS passes `node --check`; manifest + seed valid JSON.
-- ✅ **Phase 3 Gmail integration code-complete** — `content.js`: all Gmail selectors isolated in one `SELECTORS` + `get*` helper "BRITTLE ZONE" block; orchestrator runs all 5 checks → `risk.compositeScore` (async for Safe Browsing); Shadow-DOM banner (red ≥0.3 / green) with `risk %`, a **plain-language "Why flagged?" breakdown** (one human sentence per check via `buildChecks()` — no jargon/percentages; problems first, then not-scanned, then passed; auto-opens when red; shows a "Main reason" = highest-contributing problem), and Verify button (matches sender to vendor by exact/lookalike/display-name → surfaces on-file phone). SPA-aware: `MutationObserver` + `hashchange`, debounced 350ms, dedupes by sender+subject. Orchestration verified offline (attack→red 70%, clean→green 0%).
+- ✅ **Phase 3 Gmail integration code-complete** — `content.js`: all Gmail selectors isolated in one `SELECTORS` + `get*` helper "BRITTLE ZONE" block; orchestrator runs all 5 checks → `risk.compositeScore` (async for Safe Browsing); Shadow-DOM banner (red ≥0.3 / green) with `risk %`, a **plain-language "Why flagged?" breakdown** (one human sentence per check via `buildChecks()` — no jargon/percentages; problems first, then not-scanned, then passed; auto-opens when red; shows a "Main reason" = highest-contributing problem), and Verify button (matches sender to vendor by exact/lookalike → confirms saved-contact match or names the real contact being impersonated; no phone field). SPA-aware: `MutationObserver` + `hashchange`, debounced 350ms, dedupes by sender+subject. Orchestration verified offline (attack→red 70%, clean→green 0%).
 - ⬜ **Phase 3 LIVE TUNING pending** — selectors (`h2.hP`, `span.gD[email]`, `div.a3s`, `span.aV3`) are best-effort; need confirming against real Gmail. If banner doesn't show, adjust the BRITTLE ZONE only.
 - ⬜ Open decision #2 (demo mode) still deferred.
 
-**Storage schema (set by background.js):** `vendors:[{name,domain,phone}]`, `allowlist:{enabled,suffixes[],emails[]}`, `settings:{safeBrowsingKey,openaiKey,consentAccepted}`. Content-script orchestrator (Phase 3) should read these and pass `vendors`/`allowlist` into `domainScore()` and `settings.safeBrowsingKey` into `linkScore()`.
+**Storage schema (set by background.js):** `vendors:[{name,domain}]` (`domain` may be a full email for personal contacts), `allowlist:{enabled,suffixes[],emails[]}`, `settings:{safeBrowsingKey,openaiKey,consentAccepted}`. Content-script orchestrator (Phase 3) should read these and pass `vendors`/`allowlist` into `domainScore()` and `settings.safeBrowsingKey` into `linkScore()`.
 
 **Util module pattern:** each util is a UMD-ish IIFE — attaches to a `Mail*` global (for content-script use) AND `module.exports` (for Node tests). Tests are zero-dep `*.test.js` plain asserts; run `node mailsentry/utils/<name>.test.js` or loop all with `for t in *.test.js; do node "$t"; done`. Network/DOM modules take injectable `fetch`/`jsQR`/`document` for testability.
 

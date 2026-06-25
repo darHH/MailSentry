@@ -36,7 +36,7 @@
 - [x] `utils/attachmentCheck.js` — binary signal as a pure function (attachment on payment-instruction email → 0.5) **+ test**
 - [x] `utils/linkScanner.js` — Safe Browsing call. **Built stub-first** (no key → stubbed 0); real key wires in once acquired **+ test (injected fetch)**
 - [x] `utils/qrExtractor.js` — jsQR decode `<img>` → URL → linkScanner. **Built stub-first** (no jsQR → stubbed); tainted-canvas guarded **+ test (injected jsQR/DOM)**
-- [x] `demo/seed.json` — 5 vendors `{ name, domain, phone }` (placeholder data)
+- [x] `demo/seed.json` — 5 vendors `{ name, domain }` (placeholder data)
 
 ## Phase 2 — Extension shell (works without Gmail)
 
@@ -52,7 +52,7 @@
 - [x] `content.js` DOM parser: extract sender/domain, subject, body text, body links, attachment indicators, `<img>` tags (for QR) — all selectors isolated in `SELECTORS` + `get*` helpers (one BRITTLE ZONE block)
 - [x] Orchestrator: run all 5 checks → compute composite via `risk.js` (verified offline: attack→red 70%, clean→green 0%)
 - [x] Banner injection: red (≥ 0.3) / green check, with score + per-signal breakdown tooltip (`<details>` table)
-- [x] One-click **Verify** → look up vendor in whitelist (exact / lookalike / display-name match) → surface on-file phone number
+- [x] One-click **Verify** → look up vendor in whitelist (exact / lookalike match) → confirm saved-contact match or name the real contact being impersonated (phone field removed)
 - [x] Scoped styling (Shadow DOM / inline CSS) to avoid Gmail CSS collisions
 - [ ] **LIVE TUNING (needs real Gmail):** confirm Gmail selectors (`h2.hP`, `span.gD[email]`, `div.a3s`, `span.aV3`) resolve on your account; adjust BRITTLE ZONE if banner doesn't appear
 

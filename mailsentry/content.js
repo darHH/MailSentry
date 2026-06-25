@@ -4,7 +4,8 @@
 //
 // Flow: detect an opened email → parse it → run the 5 checks → compute composite
 // (risk.js) → inject a Shadow-DOM banner (red >=0.3 / green) with a per-signal
-// breakdown + one-click Verify that surfaces the on-file vendor phone number.
+// breakdown + one-click Verify that confirms a saved-contact match or names the
+// real contact a lookalike sender is impersonating.
 
 (function () {
   'use strict';
@@ -326,11 +327,11 @@
           background: #2563eb; color: #fff; border: none; border-radius: 7px;
           padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer;
         }
-        .phone {
-          display: none; font-size: 13px; font-weight: 600; color: #111827;
+        .vinfo {
+          display: none; font-size: 13px; color: #111827;
           background: #fff; border: 1px solid #d1d5db; border-radius: 7px; padding: 6px 10px;
         }
-        .phone b { color: #2563eb; }
+        .vinfo b { color: #2563eb; }
         .note { font-size: 11px; color: #92400e; margin-top: 8px; }
       </style>
       <div class="bar">
@@ -341,7 +342,7 @@
         </div>
         <p class="msg">
           ${isRed
-            ? 'This email scored above the risk threshold. If it asks you to pay or change bank details, confirm by phone before doing anything.'
+            ? 'This email scored above the risk threshold. If it asks you to pay or change bank details, confirm through a channel you already trust (a saved phone number or in person) before doing anything.'
             : 'MailSentry checked sender, urgency, links, attachments and QR codes. Nothing suspicious — stay alert anyway.'}
         </p>
         <details${isRed ? ' open' : ''}>
@@ -351,22 +352,24 @@
         </details>
         <div class="verify">
           <button id="verifyBtn">Verify sender</button>
-          <span class="phone" id="phoneOut"></span>
+          <span class="vinfo" id="verifyOut"></span>
         </div>
       </div>
     `;
 
     shadow.getElementById('verifyBtn').addEventListener('click', () => {
-      const out = shadow.getElementById('phoneOut');
+      const out = shadow.getElementById('verifyOut');
       out.style.display = 'inline-block';
-      if (vendorMatch && vendorMatch.vendor.phone) {
+      if (vendorMatch && vendorMatch.vendor) {
         const v = vendorMatch.vendor;
-        const label = vendorMatch.kind === 'lookalike'
-          ? `Looks like <b>${v.name}</b> — call the number on file, not anything in this email:`
-          : `On file for <b>${v.name}</b>:`;
-        out.innerHTML = `${label} <b>${v.phone}</b>`;
+        const real = esc(Domain.vendorIdentity(v).email || Domain.vendorIdentity(v).domain);
+        if (vendorMatch.kind === 'lookalike') {
+          out.innerHTML = `This is NOT your saved contact <b>${esc(v.name)}</b> (real: <b>${real}</b>). Reach them through a contact you already trust — not anything in this email.`;
+        } else {
+          out.innerHTML = `Matches your saved contact <b>${esc(v.name)}</b> (<b>${real}</b>). Still confirm out-of-band for any payment change.`;
+        }
       } else {
-        out.innerHTML = 'No matching vendor on file. Add them in the MailSentry popup to store a verified phone number.';
+        out.innerHTML = 'No matching saved contact. Add this sender in the MailSentry popup if you trust them.';
       }
     });
 

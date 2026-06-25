@@ -4,7 +4,7 @@
 // user data (only fills in missing keys).
 
 const DEFAULTS = {
-  vendors: [],            // [{ name, domain, phone }]
+  vendors: [],            // [{ name, domain }]  (domain may be a full email for personal contacts)
   allowlist: {            // strict opt-in "flag everything not pre-approved" mode
     enabled: false,
     suffixes: [],         // ['acme.com', '*.acme.com']

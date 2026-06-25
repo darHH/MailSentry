@@ -24,7 +24,7 @@ function renderVendors(vendors) {
     const b = document.createElement('b');
     b.textContent = v.name || v.domain;
     const span = document.createElement('span');
-    span.textContent = `${v.domain}${v.phone ? ' · ' + v.phone : ''}`;
+    span.textContent = v.email || v.domain;
     meta.append(b, span);
     const del = document.createElement('button');
     del.className = 'danger';
@@ -39,12 +39,11 @@ function renderVendors(vendors) {
 async function addVendor() {
   const name = $('vName').value.trim();
   const domain = $('vDomain').value.trim().toLowerCase();
-  const phone = $('vPhone').value.trim();
   if (!domain) return;
   const { vendors } = await getState();
-  vendors.push({ name: name || domain, domain, phone });
+  vendors.push({ name: name || domain, domain });
   await chrome.storage.local.set({ vendors });
-  $('vName').value = $('vDomain').value = $('vPhone').value = '';
+  $('vName').value = $('vDomain').value = '';
   renderVendors(vendors);
 }
 
