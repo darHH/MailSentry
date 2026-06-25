@@ -11,7 +11,6 @@ const DEFAULTS = {
   },
   settings: {
     safeBrowsingKey: '',  // entered via popup; empty → link/QR run stub-first
-    openaiKey: '',        // stretch GPT-4o explainer
     consentAccepted: false,
   },
 };

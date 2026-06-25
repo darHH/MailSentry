@@ -18,7 +18,7 @@
 - [x] `.gitignore` — exclude any local key/config file (never commit API keys)
 - [x] `README.md` skeleton — load-unpacked instructions placeholder
 - [x] **Acquire Google Safe Browsing API key** — DONE by user (paste into popup → stored in `chrome.storage.local`, read by `linkScanner`). Never committed.
-- [ ] *(stretch)* Acquire OpenAI API key for the GPT-4o layer *(USER task)*
+- [x] ~~*(stretch)* Acquire OpenAI API key for the GPT-4o layer *(USER task)*~~ — no longer needed (LLM layer removed 2026-06-26)
 - [x] **OPEN DECISION #1 — banner styling:** RESOLVED → inline scoped CSS inside Shadow DOM (Tailwind CDN blocked by MV3 CSP). (CONTEXT §8)
 - [ ] **OPEN DECISION #2 — demo mode:** deferred by user; revisit before Phase 5. (CONTEXT §8)
 
@@ -42,7 +42,7 @@
 
 - [x] `background.js` — seed `chrome.storage.local` with `seed.json` vendors on install (idempotent; opens onboarding on first install)
 - [x] `onboarding.html` / `onboarding.js` — first-run consent screen (one checkbox, one confirm; exact copy in CONTEXT §3) + privacy policy link. *This is a demo trust moment.*
-- [x] `popup.html` / `popup.js` — whitelist manager (view/add/remove vendors) + API key settings (Safe Browsing, optional OpenAI)
+- [x] `popup.html` / `popup.js` — whitelist manager (view/add/remove vendors) + API key settings (Safe Browsing)
   - [x] Allowlist-mode controls: on/off toggle + single unified entry list (`@domain` or `email`), persisted to `chrome.storage.local`
 
 ## Phase 3 — Gmail integration (the brittle part — isolate it)
@@ -73,5 +73,5 @@
 
 ## Ideas / future improvements (not scheduled)
 
-- [ ] **Stronger email + QR analysis layer.** Add a second, more reliable detection pass beyond keyword/Levenshtein — e.g. wire up the real jsQR decode (currently stubbed), and consider an AI/heuristic content check for scam intent. Goal: fewer misses, fewer false negatives.
+- [ ] **Stronger email + QR analysis layer.** Add a second, more reliable detection pass beyond keyword/Levenshtein — e.g. wire up the real jsQR decode (currently stubbed), and consider a heuristic content check for scam intent. Goal: fewer misses, fewer false negatives.
 - [ ] **Import / export trusted contacts + allowlist.** Let a user export their lists to a file and import them, so colleagues in the same company can share one vetted set of contacts/allowlist instead of each building it from scratch.
