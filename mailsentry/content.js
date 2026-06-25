@@ -163,8 +163,6 @@
     if (old) old.remove();
   }
 
-  function pct(n) { return Math.round(n * 100); }
-
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -216,8 +214,11 @@
     } else if (email.links.length === 0) {
       rows.push({ id: 'link', state: 'ok', name: 'Links', text: 'No links in this email.' });
     } else if (raw.link.stubbed) {
+      const reason = raw.link.error
+        ? 'the Safe Browsing API rejected the request — your API key looks invalid. Open MailSentry settings and re-enter a valid key.'
+        : 'add a Safe Browsing key in settings to switch this on.';
       rows.push({ id: 'link', state: 'off', name: 'Links',
-        text: `${email.links.length} link(s) not scanned — add a Safe Browsing key in settings to switch this on.` });
+        text: `${email.links.length} link(s) not scanned — ${reason}` });
     } else if (raw.link.checked > 0) {
       rows.push({ id: 'link', state: 'ok', name: 'Links',
         text: `All ${raw.link.checked} link(s) checked against Google Safe Browsing — none known-dangerous.` });
@@ -300,7 +301,6 @@
         .top { display: flex; align-items: center; gap: 10px; }
         .icon { font-size: 20px; }
         .title { font-weight: 700; font-size: 14px; color: ${isRed ? '#b91c1c' : '#047857'}; }
-        .score { margin-left: auto; font-size: 12px; color: #6b7280; }
         .msg { font-size: 13px; margin: 6px 0 0; line-height: 1.45; }
         details { margin-top: 10px; }
         summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #2563eb; }
@@ -320,7 +320,6 @@
         <div class="top">
           <span class="icon">${isRed ? '&#9888;&#65039;' : '&#9989;'}</span>
           <span class="title">${isRed ? 'Possible scam — verify before acting' : 'No scam indicators detected'}</span>
-          <span class="score">risk ${pct(result.composite)}%</span>
         </div>
         <p class="msg">
           ${isRed

@@ -1,5 +1,12 @@
-// risk.js — composite risk score. Weighted sum of the five checks.
-// Weights sum to 1.0. Threshold >= 0.3 → red banner, else green.
+// risk.js — composite risk score.
+// Two-tier model:
+//   1. Ground-truth override: if Safe Browsing flagged a link or a QR URL
+//      (link or qr score >= 1.0), composite is forced to 1.0. Google's
+//      blocklist has near-zero false positive rate, so heuristics shouldn't
+//      be able to vote it down.
+//   2. Heuristic fallback: otherwise composite is a weighted sum of the
+//      three heuristic checks (domain, urgency, attachment). Weights sum
+//      to 1.0. composite >= RED_THRESHOLD → red banner, else green.
 // See CONTEXT.md §5.
 //
 // Pure module, no deps.
@@ -7,12 +14,12 @@
 (function (root) {
   'use strict';
 
+  // Heuristic weights (sum to 1.0). link and qr are intentionally NOT here:
+  // they participate via the ground-truth override above instead.
   const WEIGHTS = {
-    domain: 0.40,     // max of lookalike | name-mismatch | allowlist violation
-    urgency: 0.25,    // weighted keyword density (subject + body)
-    link: 0.20,       // Safe Browsing result, max across all links
-    attachment: 0.10, // binary: attachment on payment-instruction email → 0.5
-    qr: 0.05,         // decoded QR URL through the same link scanner
+    domain: 0.55,     // max of lookalike | name-mismatch | allowlist violation
+    urgency: 0.30,    // weighted keyword density (subject + body)
+    attachment: 0.15, // binary: attachment on payment-instruction email → 0.5
   };
 
   const RED_THRESHOLD = 0.3;
@@ -25,7 +32,7 @@
 
   /**
    * @param {object} scores { domain, urgency, link, attachment, qr } each 0–1
-   * @returns {{ composite:number, level:'red'|'green', breakdown:object, threshold:number }}
+   * @returns {{ composite:number, level:'red'|'green', breakdown:object, threshold:number, override:boolean }}
    */
   function compositeScore(scores) {
     scores = scores || {};
@@ -40,23 +47,25 @@
     const breakdown = {
       domain: s.domain * WEIGHTS.domain,
       urgency: s.urgency * WEIGHTS.urgency,
-      link: s.link * WEIGHTS.link,
       attachment: s.attachment * WEIGHTS.attachment,
-      qr: s.qr * WEIGHTS.qr,
+      // link/qr breakdowns left in for the banner's "main reason" picker, but
+      // they no longer contribute to the weighted sum.
+      link: s.link,
+      qr: s.qr,
     };
 
-    const composite =
-      breakdown.domain +
-      breakdown.urgency +
-      breakdown.link +
-      breakdown.attachment +
-      breakdown.qr;
+    const weightedSum =
+      breakdown.domain + breakdown.urgency + breakdown.attachment;
+
+    const override = s.link >= 1.0 || s.qr >= 1.0;
+    const composite = override ? 1.0 : weightedSum;
 
     return {
       composite,
       level: composite >= RED_THRESHOLD ? 'red' : 'green',
       breakdown,
       threshold: RED_THRESHOLD,
+      override,
     };
   }
 
