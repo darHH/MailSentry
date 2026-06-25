@@ -214,8 +214,11 @@
     } else if (email.links.length === 0) {
       rows.push({ id: 'link', state: 'ok', name: 'Links', text: 'No links in this email.' });
     } else if (raw.link.stubbed) {
+      const reason = raw.link.error
+        ? 'the Safe Browsing API rejected the request — your API key looks invalid. Open MailSentry settings and re-enter a valid key.'
+        : 'add a Safe Browsing key in settings to switch this on.';
       rows.push({ id: 'link', state: 'off', name: 'Links',
-        text: `${email.links.length} link(s) not scanned — add a Safe Browsing key in settings to switch this on.` });
+        text: `${email.links.length} link(s) not scanned — ${reason}` });
     } else if (raw.link.checked > 0) {
       rows.push({ id: 'link', state: 'ok', name: 'Links',
         text: `All ${raw.link.checked} link(s) checked against Google Safe Browsing — none known-dangerous.` });

@@ -39,6 +39,34 @@ const fakeFetch = async (_url, opts) => {
   r = await linkScore(['http://evil.com'], '', fakeFetch);
   ok(r.stubbed === true && r.score === 0, 'no key over list → stubbed 0');
 
+  // ---- error-path: Safe Browsing rejected the key ----
+  // fake fetch that mimics the real 400 response for an invalid API key
+  const badKeyFetch = async () => ({
+    ok: false,
+    status: 400,
+    json: async () => ({
+      error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' },
+    }),
+  });
+
+  r = await checkUrl('http://evil.com', 'BADKEY', badKeyFetch);
+  ok(r.stubbed === true, 'invalid key → stubbed (could not scan)');
+  ok(r.score === 0, 'invalid key → score 0');
+  ok(typeof r.error === 'string' && r.error.includes('API key not valid'), 'invalid key → error surfaced');
+
+  // linkScore over a list propagates the error
+  r = await linkScore(['http://evil.com', 'http://other.com'], 'BADKEY', badKeyFetch);
+  ok(r.stubbed === true, 'invalid key over list → stubbed');
+  ok(r.score === 0 && r.hits.length === 0, 'invalid key over list → no score, no hits');
+  ok(typeof r.error === 'string' && r.error.includes('API key not valid'), 'invalid key over list → error propagated');
+  ok(r.checked === 2, 'checked count still reflects attempted URLs');
+
+  // fetch throws (network / DNS failure) → stubbed with error
+  const throwingFetch = async () => { throw new Error('network down'); };
+  r = await checkUrl('http://evil.com', 'KEY', throwingFetch);
+  ok(r.stubbed === true, 'network failure → stubbed');
+  ok(r.error && r.error.includes('network down'), 'network failure → error surfaced');
+
   console.log(`linkScanner: ${pass} passed, ${fail} failed`);
   if (fail) process.exit(1);
 })();

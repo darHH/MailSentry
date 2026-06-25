@@ -40,10 +40,21 @@
         }),
       });
       const data = await res.json();
+      // Safe Browsing returns a JSON error body on 4xx (e.g. invalid API key):
+      //   { error: { code: 400, message: "API key not valid...", status: "INVALID_ARGUMENT" } }
+      // Treat any non-OK HTTP status or any error body as "could not scan" — we
+      // must NOT silently return score 0 in that case, or the banner would show
+      // a green "all clear" while the key is actually rejected.
+      const httpFailed = res.ok === false;
+      const apiError = data && data.error;
+      if (httpFailed || apiError) {
+        const msg = (apiError && apiError.message) || `HTTP ${res.status || 'error'}`;
+        return { score: 0, stubbed: true, error: msg };
+      }
       const hit = data && data.matches && data.matches.length > 0;
       return { score: hit ? 1.0 : 0.0, stubbed: false };
     } catch (e) {
-      return { score: 0, stubbed: false, error: String(e) };
+      return { score: 0, stubbed: true, error: String(e) };
     }
   }
 
@@ -56,18 +67,20 @@
    */
   async function linkScore(urls, apiKey, fetchImpl) {
     const list = (urls || []).filter(Boolean);
-    if (list.length === 0) return { score: 0, stubbed: !apiKey, checked: 0, hits: [] };
+    if (list.length === 0) return { score: 0, stubbed: !apiKey, checked: 0, hits: [], error: null };
 
     let worst = 0;
     let anyReal = false;
     const hits = [];
+    let firstError = null;
     for (const url of list) {
       const r = await checkUrl(url, apiKey, fetchImpl);
       if (!r.stubbed) anyReal = true;
+      if (r.error && !firstError) firstError = r.error;
       if (r.score >= 1.0) hits.push(url);
       worst = Math.max(worst, r.score);
     }
-    return { score: worst, stubbed: !anyReal, checked: list.length, hits };
+    return { score: worst, stubbed: !anyReal, checked: list.length, hits, error: firstError };
   }
 
   const api = { checkUrl, linkScore, SB_ENDPOINT };
