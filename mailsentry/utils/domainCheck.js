@@ -60,35 +60,49 @@
       .filter((t) => t.length >= 3); // drop noise like "co", "pte", "&"
   }
 
-  // Normalise a stored vendor into { email, domain }. Tolerates a full email typed
-  // into the `domain` field (common user mistake / intentional for personal contacts).
-  function vendorIdentity(v) {
-    let email = (v.email || '').toLowerCase().trim();
-    let domain = (v.domain || '').toLowerCase().trim();
-    if (!email && domain.includes('@')) { email = domain; domain = ''; }
-    if (!domain && email.includes('@')) domain = email.split('@')[1];
-    return { email, domain };
+  // Parse one unified scope entry (used by BOTH vendors and allowlist). Rule:
+  //   "@acme.com"      → domain entry  (matches that domain + its subdomains)
+  //   "jo@acme.com"    → email entry   (exact address)
+  //   "acme.com"       → domain entry  (no '@' → treated as a bare domain)
+  // Returns { kind:'domain'|'email'|'empty', domain, email }.
+  function parseScopeEntry(raw) {
+    raw = (raw == null ? '' : String(raw)).toLowerCase().trim();
+    if (!raw) return { kind: 'empty', domain: '', email: '' };
+    if (raw[0] === '@') {
+      const dom = raw.slice(1).replace(/^[.*]+/, '').replace(/^\.+/, '');
+      return { kind: 'domain', domain: dom, email: '' };
+    }
+    if (raw.includes('@')) {
+      return { kind: 'email', email: raw, domain: raw.split('@').pop() };
+    }
+    // legacy "*.acme.com" or bare "acme.com" → domain
+    return { kind: 'domain', domain: raw.replace(/^\*\./, ''), email: '' };
+  }
+
+  // A vendor is just a scope entry (+ optional display name). `entry` is canonical;
+  // `domain`/`email` accepted for back-compat with previously stored vendors.
+  function vendorScope(v) {
+    return parseScopeEntry(v.entry != null ? v.entry : (v.domain || v.email || ''));
   }
 
   /**
-   * Sub-signal 1: lookalike via Levenshtein. Adaptive granularity per vendor:
-   *   full-email vendor → compare the WHOLE address (catches username typo-squat)
-   *   domain vendor     → compare registrable domains (catches lookalike domains)
+   * Sub-signal 1: lookalike via Levenshtein. Granularity follows the entry kind:
+   *   email entry  → compare the WHOLE address (catches username typo-squat)
+   *   domain entry → compare registrable domains (catches lookalike domains)
    */
   function lookalikeSignal(parsed, vendors) {
     const sAddr = parsed.address || '';
     const sRoot = rootDomain(parsed.domain);
     let worst = 0;
     for (const v of vendors || []) {
-      const id = vendorIdentity(v);
-      if (id.email) {
-        // address-level: e.g. wnaya@rocketmail.com vs wnayar@rocketmail.com (d=1)
+      const sc = vendorScope(v);
+      if (sc.kind === 'email') {
         if (!sAddr) continue;
-        if (sAddr === id.email) return 0; // exact → it IS the vendor, safe
-        const d = levenshtein(sAddr, id.email);
+        if (sAddr === sc.email) return 0; // exact → it IS the vendor, safe
+        const d = levenshtein(sAddr, sc.email);
         if (d >= 1 && d <= 2) worst = Math.max(worst, 1.0);
-      } else if (id.domain) {
-        const vroot = rootDomain(id.domain);
+      } else if (sc.kind === 'domain' && sc.domain) {
+        const vroot = rootDomain(sc.domain);
         if (!vroot || !sRoot) continue;
         if (sRoot === vroot) return 0; // exact domain → it IS the vendor, safe
         const d = levenshtein(sRoot, vroot);
@@ -111,7 +125,7 @@
       // display name claims this vendor if it contains all the vendor's significant tokens
       const claims = vToks.every((t) => nameToks.has(t));
       if (!claims) continue;
-      const vroot = rootDomain(vendorIdentity(v).domain);
+      const vroot = rootDomain(vendorScope(v).domain);
       // claims the vendor but the domain is neither the vendor's nor a near-lookalike of it
       const d = levenshtein(root, vroot);
       if (d > 2) return 1.0;
@@ -119,21 +133,24 @@
     return 0;
   }
 
-  /** Sub-signal 3: allowlist mode (opt-in). Everything not pre-approved scores high. */
+  /**
+   * Sub-signal 3: allowlist mode (opt-in). Everything not pre-approved scores high.
+   * Single unified `entries` list (same @domain / email format as vendors). Old
+   * `emails`/`suffixes` arrays still honoured for back-compat.
+   */
   function allowlistSignal(address, domain, allowlist) {
     if (!allowlist || !allowlist.enabled) return 0;
-    const emails = (allowlist.emails || []).map((e) => e.toLowerCase().trim());
-    if (emails.includes(address)) return 0;
-
-    const suffixes = allowlist.suffixes || [];
-    for (let suf of suffixes) {
-      suf = suf.toLowerCase().trim().replace(/^@/, '');
-      if (!suf) continue;
-      if (suf.startsWith('*.')) {
-        const base = suf.slice(2);
-        if (domain === base || domain.endsWith('.' + base)) return 0;
-      } else if (domain === suf || domain.endsWith('.' + suf)) {
-        return 0;
+    const entries = [].concat(
+      allowlist.entries || [],
+      allowlist.emails || [],
+      allowlist.suffixes || []
+    );
+    for (const raw of entries) {
+      const sc = parseScopeEntry(raw);
+      if (sc.kind === 'email') {
+        if (address === sc.email) return 0;
+      } else if (sc.kind === 'domain' && sc.domain) {
+        if (domain === sc.domain || domain.endsWith('.' + sc.domain)) return 0;
       }
     }
     return 1.0; // not on allowlist
@@ -142,7 +159,7 @@
   /**
    * Composite sender/domain score.
    * @param {string|object} sender  raw From header, or { displayName, address }
-   * @param {object} opts { vendors:[{name,domain}], allowlist:{enabled,suffixes,emails} }
+   * @param {object} opts { vendors:[{name,entry}], allowlist:{enabled,entries} }
    * @returns {{ score:number, signals:object, parsed:object }}
    */
   function domainScore(sender, opts) {
@@ -171,7 +188,7 @@
     return { score, signals, parsed };
   }
 
-  const api = { domainScore, parseSender, rootDomain, vendorIdentity };
+  const api = { domainScore, parseSender, rootDomain, parseScopeEntry, vendorScope };
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;

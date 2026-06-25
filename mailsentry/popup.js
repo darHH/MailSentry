@@ -1,16 +1,28 @@
 // popup.js — whitelist manager + allowlist-mode controls + API key settings.
 // All state persists to chrome.storage.local. No build step, vanilla DOM.
+//
+// Unified entry format (vendors + allowlist): "@acme.com" = domain (and its
+// subdomains), "jo@acme.com" = exact email.
 
 const $ = (id) => document.getElementById(id);
 
 async function getState() {
   const s = await chrome.storage.local.get(['vendors', 'allowlist', 'settings']);
+  const allowlist = s.allowlist || {};
+  // migrate legacy {suffixes, emails} → unified {entries}
+  if (!Array.isArray(allowlist.entries)) {
+    allowlist.entries = [].concat(allowlist.emails || [], allowlist.suffixes || []);
+  }
+  if (typeof allowlist.enabled !== 'boolean') allowlist.enabled = false;
   return {
     vendors: s.vendors || [],
-    allowlist: s.allowlist || { enabled: false, suffixes: [], emails: [] },
+    allowlist: { enabled: allowlist.enabled, entries: allowlist.entries },
     settings: s.settings || { safeBrowsingKey: '', openaiKey: '', consentAccepted: false },
   };
 }
+
+// the canonical entry string for a vendor (handles legacy domain/email fields)
+const vendorEntry = (v) => v.entry || v.domain || v.email || '';
 
 // ---- Vendors ----
 function renderVendors(vendors) {
@@ -22,9 +34,9 @@ function renderVendors(vendors) {
     const meta = document.createElement('div');
     meta.className = 'meta';
     const b = document.createElement('b');
-    b.textContent = v.name || v.domain;
+    b.textContent = v.name || vendorEntry(v);
     const span = document.createElement('span');
-    span.textContent = v.email || v.domain;
+    span.textContent = vendorEntry(v);
     meta.append(b, span);
     const del = document.createElement('button');
     del.className = 'danger';
@@ -38,12 +50,12 @@ function renderVendors(vendors) {
 
 async function addVendor() {
   const name = $('vName').value.trim();
-  const domain = $('vDomain').value.trim().toLowerCase();
-  if (!domain) return;
+  const entry = $('vEntry').value.trim().toLowerCase();
+  if (!entry) return;
   const { vendors } = await getState();
-  vendors.push({ name: name || domain, domain });
+  vendors.push(name ? { name, entry } : { entry });
   await chrome.storage.local.set({ vendors });
-  $('vName').value = $('vDomain').value = '';
+  $('vName').value = $('vEntry').value = '';
   renderVendors(vendors);
 }
 
@@ -54,27 +66,23 @@ async function removeVendor(i) {
   renderVendors(vendors);
 }
 
-// ---- Allowlist mode ----
-function renderList(ulId, items, onRemove) {
-  const ul = $(ulId);
+// ---- Allowlist mode (single unified entries list) ----
+function renderAllowlist(allowlist) {
+  $('allowToggle').checked = !!allowlist.enabled;
+  const ul = $('allowList');
   ul.innerHTML = '';
-  items.forEach((item, i) => {
+  if (allowlist.entries.length === 0) ul.innerHTML = '<li><span class="muted">Nothing allowed yet.</span></li>';
+  allowlist.entries.forEach((item, i) => {
     const li = document.createElement('li');
     const span = document.createElement('span');
     span.textContent = item;
     const del = document.createElement('button');
     del.className = 'danger';
     del.textContent = '×';
-    del.addEventListener('click', () => onRemove(i));
+    del.addEventListener('click', () => removeEntry(i));
     li.append(span, del);
     ul.appendChild(li);
   });
-}
-
-function renderAllowlist(allowlist) {
-  $('allowToggle').checked = !!allowlist.enabled;
-  renderList('suffixList', allowlist.suffixes, removeSuffix);
-  renderList('emailList', allowlist.emails, removeEmail);
 }
 
 async function saveAllowlist(mutate) {
@@ -85,20 +93,13 @@ async function saveAllowlist(mutate) {
 }
 
 const toggleAllow = () => saveAllowlist((a) => { a.enabled = $('allowToggle').checked; });
-const addSuffix = () => {
-  const v = $('suffixInput').value.trim().toLowerCase();
+const addEntry = () => {
+  const v = $('allowInput').value.trim().toLowerCase();
   if (!v) return;
-  $('suffixInput').value = '';
-  saveAllowlist((a) => { if (!a.suffixes.includes(v)) a.suffixes.push(v); });
+  $('allowInput').value = '';
+  saveAllowlist((a) => { if (!a.entries.includes(v)) a.entries.push(v); });
 };
-const removeSuffix = (i) => saveAllowlist((a) => a.suffixes.splice(i, 1));
-const addEmail = () => {
-  const v = $('emailInput').value.trim().toLowerCase();
-  if (!v) return;
-  $('emailInput').value = '';
-  saveAllowlist((a) => { if (!a.emails.includes(v)) a.emails.push(v); });
-};
-const removeEmail = (i) => saveAllowlist((a) => a.emails.splice(i, 1));
+const removeEntry = (i) => saveAllowlist((a) => a.entries.splice(i, 1));
 
 // ---- API keys ----
 async function saveKeys() {
@@ -120,7 +121,6 @@ async function saveKeys() {
 
   $('addVendor').addEventListener('click', addVendor);
   $('allowToggle').addEventListener('change', toggleAllow);
-  $('addSuffix').addEventListener('click', addSuffix);
-  $('addEmail').addEventListener('click', addEmail);
+  $('addAllow').addEventListener('click', addEntry);
   $('saveKeys').addEventListener('click', saveKeys);
 })();

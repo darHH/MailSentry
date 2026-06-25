@@ -94,20 +94,20 @@
   }
 
   // Find the real vendor the sender is impersonating / matching, so the breakdown
-  // can name it. Mirrors lookalikeSignal granularity: full-email vendors match on
-  // whole address, domain vendors match on registrable domain.
+  // can name it. Mirrors lookalikeSignal granularity: email entries match on the
+  // whole address, domain entries match on registrable domain.
   function matchVendor(parsed, vendors) {
     const root = Domain.rootDomain(parsed.domain);
     const sAddr = parsed.address || '';
     let exact = null, near = null, nearDist = 99;
     for (const v of vendors) {
-      const id = Domain.vendorIdentity(v);
-      if (id.email) {
-        if (sAddr && sAddr === id.email) { exact = v; break; }
-        const d = Lev.levenshtein(sAddr, id.email);
+      const sc = Domain.vendorScope(v);
+      if (sc.kind === 'email') {
+        if (sAddr && sAddr === sc.email) { exact = v; break; }
+        const d = Lev.levenshtein(sAddr, sc.email);
         if (d <= 2 && d < nearDist) { near = v; nearDist = d; }
-      } else if (id.domain) {
-        const vroot = Domain.rootDomain(id.domain);
+      } else if (sc.kind === 'domain' && sc.domain) {
+        const vroot = Domain.rootDomain(sc.domain);
         if (!vroot) continue;
         if (root && root === vroot) { exact = v; break; }
         const d = Lev.levenshtein(root, vroot);
@@ -121,7 +121,7 @@
       (parsed.displayName || '').toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3)
     );
     for (const v of vendors) {
-      const vToks = v.name.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
+      const vToks = (v.name || '').toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
       if (vToks.length && vToks.every((t) => nameToks.has(t))) return { vendor: v, kind: 'name' };
     }
     return null;
@@ -191,7 +191,10 @@
 
     // 1. Sender
     if (sig.lookalike >= 1) {
-      const vn = vendorMatch && vendorMatch.vendor ? esc(vendorMatch.vendor.name) : 'a saved contact';
+      const mv = vendorMatch && vendorMatch.vendor;
+      const vn = mv
+        ? esc(mv.name || Domain.vendorScope(mv).email || Domain.vendorScope(mv).domain)
+        : 'a saved contact';
       rows.push({ id: 'domain', state: 'bad', name: 'Sender',
         text: `The address <b>${esc(parsed.address || parsed.domain)}</b> is a near-copy of your saved contact <b>${vn}</b> — only a character or two different. This is the classic impersonation trick: confirm before trusting it.` });
     } else if (sig.nameMismatch >= 1) {

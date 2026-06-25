@@ -1,9 +1,9 @@
 {
   "vendors": [
-    { "name": "Acme Supplies", "domain": "acme-supplies.com" },
-    { "name": "Lion City Logistics", "domain": "lioncitylogistics.com" },
-    { "name": "Marina Office Solutions", "domain": "marinaoffice.sg" },
-    { "name": "Tanjong Print Works", "domain": "tanjongprint.com" },
-    { "name": "Raffles Industrial", "domain": "rafflesindustrial.com.sg" }
+    { "name": "Acme Supplies", "entry": "@acme-supplies.com" },
+    { "name": "Lion City Logistics", "entry": "@lioncitylogistics.com" },
+    { "name": "Marina Office Solutions", "entry": "@marinaoffice.sg" },
+    { "name": "Tanjong Print Works", "entry": "@tanjongprint.com" },
+    { "name": "Raffles Industrial", "entry": "@rafflesindustrial.com.sg" }
   ]
 }

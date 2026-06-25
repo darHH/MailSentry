@@ -1,5 +1,5 @@
 // domainCheck.test.js — zero-dep asserts. Run: node domainCheck.test.js
-const { domainScore, parseSender, rootDomain } = require('./domainCheck');
+const { domainScore, parseSender, rootDomain, parseScopeEntry } = require('./domainCheck');
 
 let pass = 0, fail = 0;
 function eq(actual, expected, msg) {
@@ -91,6 +91,45 @@ r = domainScore('<pay@acrne-supplies.com>', { vendors: mixed });
 eq(r.signals.lookalike, 1.0, 'mixed: domain lookalike still fires');
 r = domainScore('<wnayar@rocketmail.com>', { vendors: mixed });
 eq(r.signals.lookalike, 1.0, 'mixed: email lookalike still fires');
+
+// --- UNIFIED ENTRY FORMAT (parseScopeEntry: @domain vs email vs bare) ---
+eq(parseScopeEntry('@acme.com').kind, 'domain', 'parse: @acme.com → domain');
+eq(parseScopeEntry('@acme.com').domain, 'acme.com', 'parse: @acme.com domain value');
+eq(parseScopeEntry('jo@acme.com').kind, 'email', 'parse: jo@acme.com → email');
+eq(parseScopeEntry('jo@acme.com').email, 'jo@acme.com', 'parse: email value');
+eq(parseScopeEntry('acme.com').kind, 'domain', 'parse: bare acme.com → domain');
+eq(parseScopeEntry('  @ACME.com ').domain, 'acme.com', 'parse: trims + lowercases');
+eq(parseScopeEntry('').kind, 'empty', 'parse: empty');
+
+// vendors with the new `entry` field
+const entryVendors = [
+  { name: 'Acme', entry: '@acme-supplies.com' },   // domain entry
+  { name: 'Jo', entry: 'jo@gmail.com' },           // email entry
+];
+r = domainScore('<x@acrne-supplies.com>', { vendors: entryVendors });
+eq(r.signals.lookalike, 1.0, 'entry @domain: lookalike domain fires');
+r = domainScore('<x@acme-supplies.com>', { vendors: entryVendors });
+eq(r.signals.lookalike, 0, 'entry @domain: exact domain safe');
+r = domainScore('<jp@gmail.com>', { vendors: entryVendors });
+eq(r.signals.lookalike, 1.0, 'entry email: jp vs jo (d=1) fires');
+r = domainScore('<jo@gmail.com>', { vendors: entryVendors });
+eq(r.signals.lookalike, 0, 'entry email: exact safe');
+// @domain vendor must NOT flag a totally different person on that domain
+r = domainScore('<someone@gmail.com>', { vendors: [{ entry: '@gmail.com' }] });
+eq(r.signals.lookalike, 0, 'entry @gmail.com: any gmail user is not a lookalike');
+
+// --- UNIFIED ALLOWLIST `entries` list ---
+const allowEntries = { enabled: true, entries: ['@acme.com', 'ceo@gmail.com'] };
+r = domainScore('<x@acme.com>', { allowlist: allowEntries });
+eq(r.signals.allowlist, 0, 'entries: @acme.com passes acme.com');
+r = domainScore('<x@sub.acme.com>', { allowlist: allowEntries });
+eq(r.signals.allowlist, 0, 'entries: @acme.com passes subdomain');
+r = domainScore('<ceo@gmail.com>', { allowlist: allowEntries });
+eq(r.signals.allowlist, 0, 'entries: exact email passes');
+r = domainScore('<other@gmail.com>', { allowlist: allowEntries });
+eq(r.signals.allowlist, 1.0, 'entries: different gmail user flagged (email is exact)');
+r = domainScore('<x@stranger.com>', { allowlist: allowEntries });
+eq(r.signals.allowlist, 1.0, 'entries: unlisted domain flagged');
 
 console.log(`domainCheck: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

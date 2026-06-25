@@ -62,11 +62,11 @@
 
   <div class="section">
     <h3>Vendors (whitelist)</h3>
-    <p class="muted">Checked for lookalikes. Enter a <b>company domain</b> (acme.com → catches lookalike domains) or a <b>full email</b> (jo@gmail.com → catches username lookalikes).</p>
+    <p class="muted">Checked for lookalikes. Enter <b>@domain</b> (e.g. <code>@acme.com</code> → catches lookalike domains) or a <b>full email</b> (e.g. <code>jo@gmail.com</code> → catches username lookalikes). Name optional.</p>
     <ul class="list" id="vendorList"></ul>
     <div class="row">
-      <input type="text" id="vName" placeholder="Name" />
-      <input type="text" id="vDomain" placeholder="acme.com or jo@gmail.com" />
+      <input type="text" id="vName" placeholder="Name (optional)" />
+      <input type="text" id="vEntry" placeholder="@acme.com or jo@gmail.com" />
       <button id="addVendor">Add</button>
     </div>
   </div>
@@ -76,16 +76,11 @@
       <h3 style="margin:0">Allowlist mode</h3>
       <label class="switch"><input type="checkbox" id="allowToggle" /><span class="slider"></span></label>
     </div>
-    <p class="muted">Strict: flag every sender NOT on the allowed suffix/email list. Default off.</p>
-    <ul class="list" id="suffixList"></ul>
+    <p class="muted">Strict: flag every sender NOT on this list. Same format — <code>@acme.com</code> (whole domain) or <code>jo@acme.com</code> (one address). Default off.</p>
+    <ul class="list" id="allowList"></ul>
     <div class="row">
-      <input type="text" id="suffixInput" placeholder="acme.com or *.acme.com" />
-      <button id="addSuffix">Add</button>
-    </div>
-    <ul class="list" id="emailList"></ul>
-    <div class="row">
-      <input type="text" id="emailInput" placeholder="person@acme.com" />
-      <button id="addEmail">Add</button>
+      <input type="text" id="allowInput" placeholder="@acme.com or jo@acme.com" />
+      <button id="addAllow">Add</button>
     </div>
   </div>
 

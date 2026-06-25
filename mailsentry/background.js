@@ -4,11 +4,10 @@
 // user data (only fills in missing keys).
 
 const DEFAULTS = {
-  vendors: [],            // [{ name, domain }]  (domain may be a full email for personal contacts)
+  vendors: [],            // [{ name?, entry }]  entry: '@acme.com' (domain) or 'jo@acme.com' (email)
   allowlist: {            // strict opt-in "flag everything not pre-approved" mode
     enabled: false,
-    suffixes: [],         // ['acme.com', '*.acme.com']
-    emails: [],           // ['ceo@acme.com']
+    entries: [],          // ['@acme.com', 'ceo@acme.com']  (same format as vendor entry)
   },
   settings: {
     safeBrowsingKey: '',  // entered via popup; empty → link/QR run stub-first
