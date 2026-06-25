@@ -291,12 +291,20 @@
     shadow.innerHTML = `
       <style>
         :host { all: initial; }
+        @keyframes msEnter {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         .bar {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
           border-radius: 10px; padding: 12px 14px; margin: 8px 0 4px;
           border: 1px solid ${isRed ? '#fca5a5' : '#a7f3d0'};
           background: ${isRed ? '#fef2f2' : '#f0fdf4'};
           color: #111827; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+          animation: msEnter 220ms ease-out;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .bar { animation: none; }
         }
         .top { display: flex; align-items: center; gap: 10px; }
         .icon { font-size: 20px; }
