@@ -233,6 +233,6 @@ mailsentry/
 
 **Util module pattern:** each util is a UMD-ish IIFE — attaches to a `Mail*` global (for content-script use) AND `module.exports` (for Node tests). Tests are zero-dep `*.test.js` plain asserts; run `node mailsentry/utils/<name>.test.js` or loop all with `for t in *.test.js; do node "$t"; done`. Network/DOM modules take injectable `fetch`/`jsQR`/`document` for testability.
 
-**Next step:** Phase 3 is now fully done (live tuning confirmed 2026-06-26 — banner renders on real Gmail). Move to Phase 4 stretch items (Gemini/GPT-4o `explain()` layer, privacy policy) and Phase 5 demo prep (2 test emails: one clean, one lookalike attack) + resolve open decision #2.
+**Next step:** Phase 3 fully done (live tuning confirmed 2026-06-26). **Phase 4 LLM explain layer SKIPPED (2026-06-26)** — `buildChecks()` already produces a plain-English row per check deterministically, so an LLM call would duplicate existing output, weaken the privacy pitch (POSTing email content to a third party), and add a demo-day failure mode. Privacy policy page (Phase 4) still open. Real next work: Phase 5 demo prep (2 test emails: clean + lookalike attack), resolve open decision #2, and close the local-part-on-trusted-domain detection gap (`noreply-team@trusted.com` style — current pipeline doesn't catch it; candidate sub-signal in `domainCheck.js`).
 
 > When you finish a work session, update this section: what got done, what's in progress, and the single clearest "next step."
