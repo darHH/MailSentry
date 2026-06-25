@@ -28,9 +28,9 @@
 
 - [ ] `utils/levenshtein.js` — domain fuzzy-match helper (~20 lines) **+ test** — *do this first per spec*
 - [ ] `utils/domainCheck.js` — composes the 0.40 sender/domain score as `max` of three sub-signals **+ test**:
-- [ ] Lookalike: Levenshtein vs known-vendor domains
-- [ ] Display-name vs email mismatch: parse `"Name" <addr@domain>`, flag when display name claims a known vendor/brand but the address domain is unrelated
-- [ ] Allowlist mode (optional toggle): if enabled, only whitelisted domain suffixes (`@acme.com`, `@*.acme.com`) or explicit whitelisted emails pass; everything else scores high. Default off.
+  - [ ] Lookalike: Levenshtein vs known-vendor domains
+  - [ ] Display-name vs email mismatch: parse `"Name" <addr@domain>`, flag when display name claims a known vendor/brand but the address domain is unrelated
+  - [ ] Allowlist mode (optional toggle): if enabled, only whitelisted domain suffixes (`@acme.com`, `@*.acme.com`) or explicit whitelisted emails pass; everything else scores high. Default off.
 - [ ] `utils/urgency.js` — keyword list + weighted scorer (subject + body) **+ test**
 - [ ] `utils/risk.js` — composite formula (0.40/0.25/0.20/0.10/0.05; threshold ≥ 0.3 → red) **+ test** (CONTEXT §5)
 - [ ] `utils/attachmentCheck.js` — binary signal as a pure function (attachment on payment-instruction email → 0.5)
@@ -43,7 +43,7 @@
 - [ ] `background.js` — seed `chrome.storage.local` with `seed.json` vendors on install
 - [ ] `onboarding.html` / `onboarding.js` — first-run consent screen (one checkbox, one confirm; exact copy in CONTEXT §3) + privacy policy link. *This is a demo trust moment.*
 - [ ] `popup.html` / `popup.js` — whitelist manager (view/add/remove vendors) + API key settings (Safe Browsing, optional OpenAI)
-- [ ] Allowlist-mode controls: on/off toggle + manage allowed domain suffixes + manage explicit allowed emails (persist to `chrome.storage.local`)
+  - [ ] Allowlist-mode controls: on/off toggle + manage allowed domain suffixes + manage explicit allowed emails (persist to `chrome.storage.local`)
 
 ## Phase 3 — Gmail integration (the brittle part — isolate it)
 

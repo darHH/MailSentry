@@ -115,7 +115,7 @@ No backend. No auth. No database. Everything client-side except URL reputation l
 ```js
 // All scores normalised 0–1. Weights sum to 1.0.
 const compositeScore = (
-  domainScore     * 0.40 +   // Levenshtein similarity to known vendor domains
+  domainScore     * 0.40 +   // max of: lookalike (Levenshtein) | display-name↔email mismatch | allowlist-mode violation
   urgencyScore    * 0.25 +   // Weighted keyword density in subject + body
   linkScore       * 0.20 +   // Google Safe Browsing result on extracted URLs (max across all links)
   attachmentScore * 0.10 +   // Binary: attachment present on payment-instruction email → 0.5, else 0
