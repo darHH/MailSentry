@@ -17,7 +17,7 @@ async function getState() {
   return {
     vendors: s.vendors || [],
     allowlist: { enabled: allowlist.enabled, entries: allowlist.entries },
-    settings: s.settings || { safeBrowsingKey: '', openaiKey: '', consentAccepted: false },
+    settings: s.settings || { safeBrowsingKey: '', consentAccepted: false },
   };
 }
 
@@ -114,7 +114,6 @@ function renderKeyStatus(settings) {
 async function saveKeys() {
   const { settings } = await getState();
   settings.safeBrowsingKey = $('sbKey').value.trim();
-  settings.openaiKey = $('oaKey').value.trim();
   await chrome.storage.local.set({ settings });
   renderKeyStatus(settings);
   $('keysSaved').textContent = 'Saved ✓';
@@ -127,7 +126,6 @@ async function saveKeys() {
   renderVendors(state.vendors);
   renderAllowlist(state.allowlist);
   $('sbKey').value = state.settings.safeBrowsingKey || '';
-  $('oaKey').value = state.settings.openaiKey || '';
   renderKeyStatus(state.settings);
 
   $('addVendor').addEventListener('click', addVendor);

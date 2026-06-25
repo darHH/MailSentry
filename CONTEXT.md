@@ -71,12 +71,11 @@ The five checks:
 | Data | Destination & why |
 |---|---|
 | Extracted URLs (body + QR) | Google Safe Browsing API — check against known phishing/malware. **URL only, no email context.** |
-| Sender domain pair (suspicious vs known) — *optional* | OpenAI GPT-4o — **only if the AI explanation feature is enabled.** Domain string only, no email content. |
 | Nothing else | All other processing (Levenshtein, urgency, attachment) is local. Email content never leaves the device. |
 
 **Why client-side is the legal superpower:**
 - Never store/transmit/process email content on a server → eliminates PDPA, GDPR, and Gmail ToS exposure.
-- Only external calls are URL reputation (Safe Browsing) + optional domain-pair explanation (GPT-4o) — both minimal, non-identifying.
+- Only external call is URL reputation (Safe Browsing) — minimal, non-identifying.
 - Pitch line: *"We designed client-side processing specifically so an SME never has to trust us with their inbox."*
 - Post-hackathon: publish privacy policy page, complete Chrome Web Store data disclosure, PDPA registration if commercialising.
 
@@ -86,7 +85,6 @@ The five checks:
 • MailSentry reads your Gmail emails (sender, subject, body, links, attachments) to check for scam indicators
 • Email content is processed locally on your device — it never leaves your machine
 • URLs found in emails are sent to Google Safe Browsing for safety checking
-• Optional: if GPT-4o is enabled, sender domain pairs are sent to OpenAI (no email content)
 
 [ ] I understand and agree  →  [Enable MailSentry]
 ```
@@ -110,7 +108,6 @@ No backend. No auth. No database. Everything client-side except URL reputation l
 | QR extraction | **jsQR** (pure JS, ~50KB, no backend) — scans `<img>` tags, decodes QR, extracts URL → link scanner. |
 | Composite score | `risk.js` — weighted formula → single 0–1 score shown in banner. |
 | Whitelist storage | `chrome.storage.local`, JSON. 5 seeded vendors for demo. Also holds allowlist-mode toggle + unified allowlist `entries` list. |
-| AI layer (stretch) | OpenAI **GPT-4o** — one call per flagged email, domain pair only, plain-English explanation. Core works without it. |
 | Demo data | 2 hardcoded test emails (one clean, one lookalike). |
 
 ---
@@ -175,7 +172,6 @@ mailsentry/
     attachmentCheck.js           DOM parse for attachments
     qrExtractor.js               jsQR decode + pass to linkScanner
     risk.js                      composite score formula
-    openai.js                    GPT-4o explain() — optional/stretch
   demo/seed.json                 5 vendors: { entry }
   README.md                      setup instructions for judges
 ```
@@ -189,7 +185,7 @@ mailsentry/
 | Timeline | ~1 week |
 | Task structure | Modular tasks, **no owner tags** — anyone picks up any unblocked task |
 | API keys | **None acquired yet** — build stub-first, wire real keys later (Phase 0 acquisition tasks) |
-| GPT-4o AI layer | **Stretch only** — after the core 5 checks are solid |
+| LLM explain layer | **Removed (2026-06-26)** — `buildChecks()` already produces a plain-English row per check deterministically; an LLM would duplicate output, weaken the privacy pitch (POSTing email content to a third party), and add a demo-day failure mode. |
 | File names/location | Root: `TODO.md` + `CONTEXT.md` |
 | Testing | **Lightweight, no framework** — plain JS asserts, run in node or browser console, zero deps |
 
@@ -223,13 +219,13 @@ mailsentry/
 - ✅ **Phase 0 scaffold done** — `mailsentry/` file tree, MV3 `manifest.json` (storage/activeTab/scripting + `*://*.mail.google.com/*`, content scripts in dependency order, popup, onboarding as options_page), root `.gitignore` (key/secret excludes), `README.md` (load-unpacked + test instructions), `demo/seed.json` (5 SG vendors).
 - ✅ **Phase 1 pure utils ALL done + tested** (71 asserts, 0 fail): `levenshtein.js` (10), `domainCheck.js` (20 — lookalike + display-name mismatch + allowlist mode), `urgency.js` (8 — weighted keyword scorer, subject ×1.5, saturates at weight 8), `risk.js` (16 — composite 0.40/0.25/0.20/0.10/0.05, threshold ≥0.3), `attachmentCheck.js` (8), `linkScanner.js` (8 — stub-first, injected fetch), `qrExtractor.js` (9 — stub-first, tainted-canvas guarded).
 - ✅ **Open decision #1 RESOLVED** → Shadow DOM + inline scoped CSS.
-- ✅ **Safe Browsing key acquired** (user). Entered via popup → `chrome.storage.local.settings.safeBrowsingKey`, read by `linkScanner`. Never committed. OpenAI key (stretch) still optional/unset.
-- ✅ **Phase 2 extension shell done** — `background.js` (idempotent `onInstalled` seed of vendors/allowlist/settings from `demo/seed.json`, opens onboarding on first install), `onboarding.html`+`onboarding.js` (consent screen, exact §3 copy, checkbox-gated Enable, persists `settings.consentAccepted`), `popup.html`+`popup.js` (vendor whitelist add/remove with a single unified entry box, allowlist-mode toggle + single unified entry list, Safe Browsing + OpenAI key settings — all persisted to `chrome.storage.local`). All JS passes `node --check`; manifest + seed valid JSON.
+- ✅ **Safe Browsing key acquired** (user). Entered via popup → `chrome.storage.local.settings.safeBrowsingKey`, read by `linkScanner`. Never committed.
+- ✅ **Phase 2 extension shell done** — `background.js` (idempotent `onInstalled` seed of vendors/allowlist/settings from `demo/seed.json`, opens onboarding on first install), `onboarding.html`+`onboarding.js` (consent screen, exact §3 copy, checkbox-gated Enable, persists `settings.consentAccepted`), `popup.html`+`popup.js` (vendor whitelist add/remove with a single unified entry box, allowlist-mode toggle + single unified entry list, Safe Browsing key setting — all persisted to `chrome.storage.local`). All JS passes `node --check`; manifest + seed valid JSON.
 - ✅ **Phase 3 Gmail integration code-complete** — `content.js`: all Gmail selectors isolated in one `SELECTORS` + `get*` helper "BRITTLE ZONE" block; orchestrator runs all 5 checks → `risk.compositeScore` (async for Safe Browsing); Shadow-DOM banner (red ≥0.3 / green) with `risk %`, a **plain-language "Why flagged?" breakdown** (one human sentence per check via `buildChecks()` — no jargon/percentages; problems first, then not-scanned, then passed; auto-opens when red; shows a "Main reason" = highest-contributing problem; lookalike rows name the impersonated saved contact via `matchVendor()`). No standalone Verify button (removed). SPA-aware: `MutationObserver` + `hashchange`, debounced 350ms, dedupes by sender+subject. Orchestration verified offline (attack→red 70%, clean→green 0%).
 - ✅ **Phase 3 LIVE TUNING done (2026-06-26)** — selectors (`h2.hP`, `span.gD[email]`, `div.a3s`, `span.aV3`) confirmed against real Gmail; banner renders correctly. No BRITTLE ZONE changes needed.
 - ⬜ Open decision #2 (demo mode) still deferred.
 
-**Storage schema (set by background.js):** `vendors:[{entry}]` (entry = `@domain` or `email`; no name field — legacy `{name,domain}`/`{email}` still read), `allowlist:{enabled,entries[]}` (legacy `suffixes`/`emails` auto-migrated on read), `settings:{safeBrowsingKey,openaiKey,consentAccepted}`. Content-script orchestrator passes `vendors`/`allowlist` into `domainScore()` and `settings.safeBrowsingKey` into `linkScore()`. Entry parsing is centralised in `domainCheck.parseScopeEntry()` / `vendorScope()`.
+**Storage schema (set by background.js):** `vendors:[{entry}]` (entry = `@domain` or `email`; no name field — legacy `{name,domain}`/`{email}` still read), `allowlist:{enabled,entries[]}` (legacy `suffixes`/`emails` auto-migrated on read), `settings:{safeBrowsingKey,consentAccepted}`. Content-script orchestrator passes `vendors`/`allowlist` into `domainScore()` and `settings.safeBrowsingKey` into `linkScore()`. Entry parsing is centralised in `domainCheck.parseScopeEntry()` / `vendorScope()`.
 
 **Util module pattern:** each util is a UMD-ish IIFE — attaches to a `Mail*` global (for content-script use) AND `module.exports` (for Node tests). Tests are zero-dep `*.test.js` plain asserts; run `node mailsentry/utils/<name>.test.js` or loop all with `for t in *.test.js; do node "$t"; done`. Network/DOM modules take injectable `fetch`/`jsQR`/`document` for testability.
 
