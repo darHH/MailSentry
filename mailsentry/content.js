@@ -116,14 +116,6 @@
     }
     if (exact) return { vendor: exact, kind: 'exact' };
     if (near) return { vendor: near, kind: 'lookalike' };
-    // display-name claims a vendor brand?
-    const nameToks = new Set(
-      (parsed.displayName || '').toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3)
-    );
-    for (const v of vendors) {
-      const vToks = (v.name || '').toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
-      if (vToks.length && vToks.every((t) => nameToks.has(t))) return { vendor: v, kind: 'name' };
-    }
     return null;
   }
 

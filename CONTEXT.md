@@ -47,7 +47,7 @@ The five checks:
    - Vendor entry is a **domain** (`@acme-supplies.com`) → compare *registrable domains* → catches lookalike-domain BEC (`acme.com` vs `acrne.com`). This is the primary B2B threat.
    - Vendor entry is a **full email** (`wnaya@rocketmail.com`) → compare *whole addresses* → catches *username* impersonation on shared/freemail domains (`wnaya@` vs `wnayar@rocketmail.com`).
    - Rationale: B2B fraud spoofs the company (domain); local-parts vary legitimately (`billing@`/`accounts@`), so domain-only is right there. Personal/freemail contacts share a domain and their identity is the local-part, so those need address-level. `domainCheck.vendorScope()` (via `parseScopeEntry()`) decides per vendor; an exact match (domain or address) is treated as the real sender → safe.
-2. **Display-name vs email mismatch.** Compare the sender's *display name* against its *actual email address*. If the display name claims a known vendor/brand but the address domain is unrelated (e.g. `"Acme Supplies" <random123@gmail.com>`), flag. Catches the case where the address itself isn't a lookalike — the attacker just sets a convincing display name on a throwaway inbox.
+2. **Display-name vs email mismatch.** Compare the sender's *display name* against its *actual email address*. The "brand" to match against is derived from each trusted contact's **domain** (`brandTokens()`, e.g. `@acme-supplies.com` → `acme`,`supplies`) — no separate vendor name is stored. If the display name claims that brand but the address domain is unrelated (e.g. `"Acme Supplies" <random123@gmail.com>`), flag. Catches the case where the address itself isn't a lookalike — the attacker just sets a convincing display name on a throwaway inbox.
 3. **Allowlist mode (optional, user toggle).** When enabled, *only* senders matching an allowlist **entry** pass; any sender outside scores high. Entries use the same unified format as vendors (see below): `@acme.com` = the whole domain (and its subdomains), `jo@acme.com` = one exact address. Strict opt-in for finance users who only correspond with a known set — flips the model from "flag the suspicious" to "flag everything not pre-approved."
 
 > **Unified entry format (vendors + allowlist).** One text box, one rule: a string starting with `@` is a **domain** entry (`@acme.com`); a string with text before the `@` is an **exact email** entry (`jo@acme.com`); a bare string with no `@` is treated as a domain. Parsed by `domainCheck.parseScopeEntry()`. For *vendors* the entry drives lookalike granularity (domain entry → compare domains; email entry → compare whole addresses). For the *allowlist* it drives pass/fail matching (domain entry → domain or subdomain match; email entry → exact-address match).
@@ -176,7 +176,7 @@ mailsentry/
     qrExtractor.js               jsQR decode + pass to linkScanner
     risk.js                      composite score formula
     openai.js                    GPT-4o explain() — optional/stretch
-  demo/seed.json                 5 vendors: { name, domain }
+  demo/seed.json                 5 vendors: { entry }
   README.md                      setup instructions for judges
 ```
 
@@ -229,7 +229,7 @@ mailsentry/
 - ⬜ **Phase 3 LIVE TUNING pending** — selectors (`h2.hP`, `span.gD[email]`, `div.a3s`, `span.aV3`) are best-effort; need confirming against real Gmail. If banner doesn't show, adjust the BRITTLE ZONE only.
 - ⬜ Open decision #2 (demo mode) still deferred.
 
-**Storage schema (set by background.js):** `vendors:[{name?,entry}]` (entry = `@domain` or `email`; legacy `{name,domain}`/`{email}` still read), `allowlist:{enabled,entries[]}` (legacy `suffixes`/`emails` auto-migrated on read), `settings:{safeBrowsingKey,openaiKey,consentAccepted}`. Content-script orchestrator passes `vendors`/`allowlist` into `domainScore()` and `settings.safeBrowsingKey` into `linkScore()`. Entry parsing is centralised in `domainCheck.parseScopeEntry()` / `vendorScope()`.
+**Storage schema (set by background.js):** `vendors:[{entry}]` (entry = `@domain` or `email`; no name field — legacy `{name,domain}`/`{email}` still read), `allowlist:{enabled,entries[]}` (legacy `suffixes`/`emails` auto-migrated on read), `settings:{safeBrowsingKey,openaiKey,consentAccepted}`. Content-script orchestrator passes `vendors`/`allowlist` into `domainScore()` and `settings.safeBrowsingKey` into `linkScore()`. Entry parsing is centralised in `domainCheck.parseScopeEntry()` / `vendorScope()`.
 
 **Util module pattern:** each util is a UMD-ish IIFE — attaches to a `Mail*` global (for content-script use) AND `module.exports` (for Node tests). Tests are zero-dep `*.test.js` plain asserts; run `node mailsentry/utils/<name>.test.js` or loop all with `for t in *.test.js; do node "$t"; done`. Network/DOM modules take injectable `fetch`/`jsQR`/`document` for testability.
 

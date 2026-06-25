@@ -36,7 +36,7 @@
 - [x] `utils/attachmentCheck.js` — binary signal as a pure function (attachment on payment-instruction email → 0.5) **+ test**
 - [x] `utils/linkScanner.js` — Safe Browsing call. **Built stub-first** (no key → stubbed 0); real key wires in once acquired **+ test (injected fetch)**
 - [x] `utils/qrExtractor.js` — jsQR decode `<img>` → URL → linkScanner. **Built stub-first** (no jsQR → stubbed); tainted-canvas guarded **+ test (injected jsQR/DOM)**
-- [x] `demo/seed.json` — 5 vendors `{ name, domain }` (placeholder data)
+- [x] `demo/seed.json` — 5 vendors `{ entry }` (placeholder data)
 
 ## Phase 2 — Extension shell (works without Gmail)
 

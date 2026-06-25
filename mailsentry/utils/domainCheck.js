@@ -52,12 +52,19 @@
     return lastTwo;
   }
 
-  // Tokenize a brand/vendor name into lowercase word tokens for matching.
+  // Tokenize a string into lowercase word tokens for matching.
   function tokens(s) {
     return String(s || '')
       .toLowerCase()
       .split(/[^a-z0-9]+/)
       .filter((t) => t.length >= 3); // drop noise like "co", "pte", "&"
+  }
+
+  // Brand tokens derived from a vendor's DOMAIN (no separate name field needed).
+  // e.g. "acme-supplies.com" → ["acme", "supplies"]. Drops common domain noise.
+  const DOMAIN_STOP = new Set(['com', 'net', 'org', 'www', 'mail', 'gov', 'edu', 'biz', 'app', 'web']);
+  function brandTokens(domain) {
+    return tokens(domain).filter((t) => !DOMAIN_STOP.has(t));
   }
 
   // Parse one unified scope entry (used by BOTH vendors and allowlist). Rule:
@@ -112,7 +119,11 @@
     return worst;
   }
 
-  /** Sub-signal 2: display name claims a vendor/brand, address domain unrelated. */
+  /**
+   * Sub-signal 2: display name claims a vendor/brand, address domain unrelated.
+   * The "brand" is derived from the vendor's own domain (brandTokens) — no
+   * separate vendor name field required.
+   */
   function nameMismatchSignal(displayName, domain, vendors) {
     if (!displayName) return 0;
     const nameToks = new Set(tokens(displayName));
@@ -120,12 +131,13 @@
     const root = rootDomain(domain);
 
     for (const v of vendors || []) {
-      const vToks = tokens(v.name);
+      const vdom = vendorScope(v).domain;
+      const vToks = brandTokens(vdom);
       if (vToks.length === 0) continue;
-      // display name claims this vendor if it contains all the vendor's significant tokens
+      // display name claims this vendor if it contains all the brand's tokens
       const claims = vToks.every((t) => nameToks.has(t));
       if (!claims) continue;
-      const vroot = rootDomain(vendorScope(v).domain);
+      const vroot = rootDomain(vdom);
       // claims the vendor but the domain is neither the vendor's nor a near-lookalike of it
       const d = levenshtein(root, vroot);
       if (d > 2) return 1.0;

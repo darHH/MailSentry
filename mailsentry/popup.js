@@ -21,26 +21,21 @@ async function getState() {
   };
 }
 
-// the canonical entry string for a vendor (handles legacy domain/email fields)
-const vendorEntry = (v) => v.entry || v.domain || v.email || '';
+// the canonical entry string for a vendor (handles legacy domain/email/name fields)
+const vendorEntry = (v) => v.entry || v.domain || v.email || v.name || '';
 
-// ---- Vendors ----
+// ---- Trusted contacts ----
 function renderVendors(vendors) {
   const ul = $('vendorList');
   ul.innerHTML = '';
-  if (vendors.length === 0) ul.innerHTML = '<li><span class="muted">No vendors yet.</span></li>';
+  if (vendors.length === 0) ul.innerHTML = '<li><span class="muted">No trusted contacts yet.</span></li>';
   vendors.forEach((v, i) => {
     const li = document.createElement('li');
     const meta = document.createElement('div');
     meta.className = 'meta';
     const b = document.createElement('b');
-    b.textContent = v.name || vendorEntry(v);
+    b.textContent = vendorEntry(v);
     meta.append(b);
-    if (v.name) { // only show the entry line separately when a name labels it
-      const span = document.createElement('span');
-      span.textContent = vendorEntry(v);
-      meta.append(span);
-    }
     const del = document.createElement('button');
     del.className = 'danger';
     del.textContent = '×';
@@ -52,16 +47,12 @@ function renderVendors(vendors) {
 }
 
 async function addVendor() {
-  let name = $('vName').value.trim();
-  let entry = $('vEntry').value.trim().toLowerCase();
-  // Safety net: if the user typed the address/domain into the Name box and left
-  // the entry box empty, treat the Name as the entry (it's what matters).
-  if (!entry && /[@.]/.test(name)) { entry = name.toLowerCase(); name = ''; }
+  const entry = $('vEntry').value.trim().toLowerCase();
   if (!entry) return;
   const { vendors } = await getState();
-  vendors.push(name ? { name, entry } : { entry });
+  vendors.push({ entry });
   await chrome.storage.local.set({ vendors });
-  $('vName').value = $('vEntry').value = '';
+  $('vEntry').value = '';
   renderVendors(vendors);
 }
 

@@ -4,7 +4,7 @@
 // user data (only fills in missing keys).
 
 const DEFAULTS = {
-  vendors: [],            // [{ name?, entry }]  entry: '@acme.com' (domain) or 'jo@acme.com' (email)
+  vendors: [],            // [{ entry }]  entry: '@acme.com' (domain) or 'jo@acme.com' (email)
   allowlist: {            // strict opt-in "flag everything not pre-approved" mode
     enabled: false,
     entries: [],          // ['@acme.com', 'ceo@acme.com']  (same format as vendor entry)
