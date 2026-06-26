@@ -5,9 +5,8 @@
 
 const DEFAULTS = {
   vendors: [],            // [{ entry }]  entry: '@acme.com' (domain) or 'jo@acme.com' (email)
-  allowlist: {            // strict opt-in "flag everything not pre-approved" mode
-    enabled: false,
-    entries: [],          // ['@acme.com', 'ceo@acme.com']  (same format as vendor entry)
+  allowlist: {            // strict mode: flag every sender not in trusted contacts
+    enabled: false,       // toggle only — the approved list IS `vendors` above
   },
   settings: {
     safeBrowsingKey: '',  // entered via popup; empty → link/QR run stub-first

@@ -1,9 +1,6 @@
 {
   "vendors": [
-    { "entry": "@acme-supplies.com" },
-    { "entry": "@lioncitylogistics.com" },
-    { "entry": "@marinaoffice.sg" },
-    { "entry": "@tanjongprint.com" },
-    { "entry": "@rafflesindustrial.com.sg" }
+    { "entry": "@outlook.com" },
+    { "entry": "jane@gmail.com" }
   ]
 }

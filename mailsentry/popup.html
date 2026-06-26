@@ -24,12 +24,12 @@
     header .brand { font-weight: 700; font-size: 16px; letter-spacing: -.01em; }
     header .brand small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); letter-spacing: 0; }
     .status {
-      display: flex; gap: 8px; padding: 9px 16px; background: var(--card);
-      border-bottom: 1px solid var(--line); font-size: 11.5px;
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 9px 16px; background: var(--card);
+      border-bottom: 1px solid var(--line); font-size: 11px;
     }
     .pill {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 3px 9px; border-radius: 999px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+      padding: 3px 8px; border-radius: 999px; font-weight: 600;
     }
     .pill .dot { width: 7px; height: 7px; border-radius: 50%; }
     .pill.on { background: #ecfdf5; color: var(--green); }
@@ -52,6 +52,9 @@
     .examples .ex { display: flex; gap: 8px; align-items: baseline; font-size: 12px; margin: 2px 0; }
     code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #eef1f6; border: 1px solid #e1e5ec; border-radius: 4px; padding: 1px 5px; font-size: 11.5px; color: #1f2937; white-space: nowrap; }
     .ex span { color: var(--muted); }
+    .hint { color: var(--muted); font-size: 11px; margin: 7px 2px 0; line-height: 1.4; }
+    .hint p { margin: 0 0 6px; }
+    .hint p:last-child { margin-bottom: 0; }
 
     /* Inputs */
     .row { display: flex; gap: 6px; }
@@ -90,12 +93,14 @@
     input:checked + .slider { background: var(--blue); }
     input:checked + .slider::before { transform: translateX(17px); }
 
-    /* Strict-mode warning + key state */
-    .warn { display: none; margin: 0 0 10px; padding: 8px 10px; border-radius: 8px;
-      background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 12px; }
+    /* Strict-mode warning + key state — shared status-box look */
+    .warn, .keystate { margin: 0; padding: 8px 10px; border-radius: 8px; font-size: 11px; }
+    .warn { display: none; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
     .warn.show { display: block; }
-    .keystate { font-size: 11.5px; margin-top: 8px; }
+    .keystate { margin-top: 8px; }
     .keystate b { font-weight: 600; }
+    .keystate.live { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+    .keystate.off  { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
     .saved { color: var(--green); font-size: 12px; font-weight: 600; }
     .foot { padding: 10px 16px 14px; text-align: center; }
     .foot a { color: var(--blue); text-decoration: none; font-size: 11.5px; }
@@ -104,11 +109,11 @@
 <body>
   <header>
     <img class="shield" src="icons/icon-32.png" alt="" />
-    <span class="brand">MailSentry<small>Scam protection for Gmail</small></span>
+    <span class="brand">MailSentry</span>
+    <span class="pill on" style="font-size:11px"><span class="dot"></span> Protecting: Gmail</span>
   </header>
 
   <div class="status">
-    <span class="pill on"><span class="dot"></span> Protecting Gmail</span>
     <span class="pill" id="scanPill"><span class="dot"></span> <span id="scanText">Link scan: off</span></span>
     <span class="pill" id="strictPill"><span class="dot"></span> <span id="strictText">Strict mode: off</span></span>
   </div>
@@ -117,17 +122,17 @@
   <div class="card">
     <div class="card-head">
       <h3><span class="ic">&#129309;</span> Trusted contacts</h3>
-      <p class="what">People and companies you deal with. MailSentry warns you when a scammer uses a <b>look-alike</b> of one of these addresses.</p>
+      <p class="what">Add people and companies you work with here. <br/> MailSentry warns you when an email is from a <b>look-alike</b> of one of these addresses.</p>
     </div>
     <div class="body">
-      <div class="examples">
-        <div class="ex"><code>@acme.com</code><span>a whole company — flags <code>@acrne.com</code></span></div>
-        <div class="ex"><code>jo@gmail.com</code><span>one person — flags <code>jp@gmail.com</code></span></div>
-      </div>
       <ul class="list" id="vendorList"></ul>
       <div class="row">
-        <input type="text" id="vEntry" placeholder="@acme.com  or  jo@gmail.com" />
+        <input type="text" id="vEntry" placeholder="e.g., @domain.com, name@domain.com" />
         <button id="addVendor">Add</button>
+      </div>
+      <div class="hint">
+        <p><code>@domain.com</code> covers <b>all addresses</b> with @domain.com</p>
+        <p><code>name@domain</code> covers <b>exact address</b> only</p>
       </div>
     </div>
   </div>
@@ -137,21 +142,12 @@
     <div class="card-head with-toggle">
       <div>
         <h3><span class="ic">&#128274;</span> Strict mode</h3>
-        <p class="what">Flag <b>every</b> sender that isn’t on the list below. Best if you only ever email a fixed set of suppliers.</p>
+        <p class="what">Flag <b>every</b> sender who isn’t one of your trusted contacts above.</p>
       </div>
       <label class="switch"><input type="checkbox" id="allowToggle" /><span class="slider"></span></label>
     </div>
     <div class="body">
-      <div class="warn" id="strictWarn">Strict mode is <b>on</b> — anyone not listed here will be flagged, including new genuine contacts.</div>
-      <div class="examples">
-        <div class="ex"><code>@acme.com</code><span>allow everyone at that domain</span></div>
-        <div class="ex"><code>jo@acme.com</code><span>allow just that one address</span></div>
-      </div>
-      <ul class="list" id="allowList"></ul>
-      <div class="row">
-        <input type="text" id="allowInput" placeholder="@acme.com  or  jo@acme.com" />
-        <button id="addAllow">Add</button>
-      </div>
+      <div class="warn" id="strictWarn">Strict mode is <b>ON</b> <br/> Anyone not in your trusted contacts will be flagged</div>
     </div>
   </div>
 
@@ -159,17 +155,15 @@
   <div class="card">
     <div class="card-head">
       <h3><span class="ic">&#128279;</span> Link scanning</h3>
-      <p class="what">Optional. Add a free <b>Google Safe Browsing</b> key to check links in emails against known scam sites. Without it, every other check still runs.</p>
+      <p class="what">Optional. Add a free <b>Google Safe Browsing</b> key to check links in emails against known scam sites.</p>
     </div>
     <div class="body">
-      <div class="row stack">
+      <div class="row">
         <input type="password" id="sbKey" placeholder="Google Safe Browsing API key" />
-        <div class="row">
-          <button id="saveKeys">Save</button>
-          <span class="saved" id="keysSaved"></span>
-        </div>
+        <button id="saveKeys">Save</button>
+        <span class="saved" id="keysSaved"></span>
       </div>
-      <div class="keystate muted" id="keyState"></div>
+      <div class="keystate" id="keyState"></div>
     </div>
   </div>
 

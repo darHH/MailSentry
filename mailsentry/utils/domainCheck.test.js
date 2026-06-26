@@ -46,17 +46,25 @@ eq(r.score, 1.0, 'name mismatch → composite 1.0');
 r = domainScore('"Bob Newperson" <bob@somecompany.io>', { vendors });
 eq(r.score, 0, 'unknown neutral sender scores 0 (allowlist off)');
 
-// --- allowlist mode ON ---
-const allowOn = { enabled: true, suffixes: ['acme-supplies.com', '*.trusted.sg'], emails: ['ceo@gmail.com'] };
-r = domainScore('<x@acme-supplies.com>', { vendors, allowlist: allowOn });
-eq(r.signals.allowlist, 0, 'allowlist: suffix match passes');
-r = domainScore('<x@sub.trusted.sg>', { vendors, allowlist: allowOn });
-eq(r.signals.allowlist, 0, 'allowlist: wildcard suffix passes');
-r = domainScore('<ceo@gmail.com>', { vendors, allowlist: allowOn });
-eq(r.signals.allowlist, 0, 'allowlist: explicit email passes');
-r = domainScore('<stranger@unknown.com>', { vendors, allowlist: allowOn });
-eq(r.signals.allowlist, 1.0, 'allowlist: non-listed sender flagged');
-eq(r.score, 1.0, 'allowlist violation → composite 1.0');
+// --- strict mode ON: approved list IS the trusted-contacts (vendors) list ---
+const strictVendors = [
+  { entry: '@acme-supplies.com' },
+  { entry: '@trusted.sg' },
+  { entry: 'ceo@gmail.com' },
+];
+const strictOn = { enabled: true };
+r = domainScore('<x@acme-supplies.com>', { vendors: strictVendors, allowlist: strictOn });
+eq(r.signals.allowlist, 0, 'strict: domain contact passes');
+r = domainScore('<x@sub.trusted.sg>', { vendors: strictVendors, allowlist: strictOn });
+eq(r.signals.allowlist, 0, 'strict: subdomain of domain contact passes');
+r = domainScore('<ceo@gmail.com>', { vendors: strictVendors, allowlist: strictOn });
+eq(r.signals.allowlist, 0, 'strict: exact email contact passes');
+r = domainScore('<stranger@unknown.com>', { vendors: strictVendors, allowlist: strictOn });
+eq(r.signals.allowlist, 1.0, 'strict: non-contact sender flagged');
+eq(r.score, 1.0, 'strict violation → composite 1.0');
+// strict off → no contact list restriction
+r = domainScore('<stranger@unknown.com>', { vendors: strictVendors, allowlist: { enabled: false } });
+eq(r.signals.allowlist, 0, 'strict off: non-contact not flagged');
 
 // --- allowlist OFF: lookalike/name checks still run regardless ---
 r = domainScore('"Acme Supplies" <pay@acrne-supplies.com>', { vendors, allowlist: { enabled: false } });
@@ -118,18 +126,19 @@ eq(r.signals.lookalike, 0, 'entry email: exact safe');
 r = domainScore('<someone@gmail.com>', { vendors: [{ entry: '@gmail.com' }] });
 eq(r.signals.lookalike, 0, 'entry @gmail.com: any gmail user is not a lookalike');
 
-// --- UNIFIED ALLOWLIST `entries` list ---
-const allowEntries = { enabled: true, entries: ['@acme.com', 'ceo@gmail.com'] };
-r = domainScore('<x@acme.com>', { allowlist: allowEntries });
-eq(r.signals.allowlist, 0, 'entries: @acme.com passes acme.com');
-r = domainScore('<x@sub.acme.com>', { allowlist: allowEntries });
-eq(r.signals.allowlist, 0, 'entries: @acme.com passes subdomain');
-r = domainScore('<ceo@gmail.com>', { allowlist: allowEntries });
-eq(r.signals.allowlist, 0, 'entries: exact email passes');
-r = domainScore('<other@gmail.com>', { allowlist: allowEntries });
-eq(r.signals.allowlist, 1.0, 'entries: different gmail user flagged (email is exact)');
-r = domainScore('<x@stranger.com>', { allowlist: allowEntries });
-eq(r.signals.allowlist, 1.0, 'entries: unlisted domain flagged');
+// --- strict mode reads vendor entries (@domain vs exact email granularity) ---
+const strictList = [{ entry: '@acme.com' }, { entry: 'ceo@gmail.com' }];
+const strictEnabled = { enabled: true };
+r = domainScore('<x@acme.com>', { vendors: strictList, allowlist: strictEnabled });
+eq(r.signals.allowlist, 0, 'strict: @acme.com passes acme.com');
+r = domainScore('<x@sub.acme.com>', { vendors: strictList, allowlist: strictEnabled });
+eq(r.signals.allowlist, 0, 'strict: @acme.com passes subdomain');
+r = domainScore('<ceo@gmail.com>', { vendors: strictList, allowlist: strictEnabled });
+eq(r.signals.allowlist, 0, 'strict: exact email passes');
+r = domainScore('<other@gmail.com>', { vendors: strictList, allowlist: strictEnabled });
+eq(r.signals.allowlist, 1.0, 'strict: different gmail user flagged (email is exact)');
+r = domainScore('<x@stranger.com>', { vendors: strictList, allowlist: strictEnabled });
+eq(r.signals.allowlist, 1.0, 'strict: unlisted domain flagged');
 
 console.log(`domainCheck: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

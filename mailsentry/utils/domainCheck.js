@@ -146,26 +146,23 @@
   }
 
   /**
-   * Sub-signal 3: allowlist mode (opt-in). Everything not pre-approved scores high.
-   * Single unified `entries` list (same @domain / email format as vendors). Old
-   * `emails`/`suffixes` arrays still honoured for back-compat.
+   * Sub-signal 3: strict mode (opt-in). When enabled, every sender that is not an
+   * exact match of a trusted contact scores high. Uses the SAME trusted-contacts
+   * list as lookalikeSignal — no separate allowlist (a trusted contact IS an
+   * approved sender). Domain entries approve the whole domain; email entries
+   * approve only that address.
    */
-  function allowlistSignal(address, domain, allowlist) {
-    if (!allowlist || !allowlist.enabled) return 0;
-    const entries = [].concat(
-      allowlist.entries || [],
-      allowlist.emails || [],
-      allowlist.suffixes || []
-    );
-    for (const raw of entries) {
-      const sc = parseScopeEntry(raw);
+  function allowlistSignal(address, domain, vendors, enabled) {
+    if (!enabled) return 0;
+    for (const v of vendors || []) {
+      const sc = vendorScope(v);
       if (sc.kind === 'email') {
         if (address === sc.email) return 0;
       } else if (sc.kind === 'domain' && sc.domain) {
         if (domain === sc.domain || domain.endsWith('.' + sc.domain)) return 0;
       }
     }
-    return 1.0; // not on allowlist
+    return 1.0; // not a trusted contact
   }
 
   /**
@@ -193,7 +190,7 @@
     const signals = {
       lookalike: lookalikeSignal(parsed, vendors),
       nameMismatch: nameMismatchSignal(parsed.displayName, parsed.domain, vendors),
-      allowlist: allowlistSignal(parsed.address, parsed.domain, allowlist),
+      allowlist: allowlistSignal(parsed.address, parsed.domain, vendors, allowlist.enabled),
     };
 
     const score = Math.max(signals.lookalike, signals.nameMismatch, signals.allowlist);

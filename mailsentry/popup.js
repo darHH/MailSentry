@@ -8,15 +8,22 @@ const $ = (id) => document.getElementById(id);
 
 async function getState() {
   const s = await chrome.storage.local.get(['vendors', 'allowlist', 'settings']);
+  const vendors = s.vendors || [];
   const allowlist = s.allowlist || {};
-  // migrate legacy {suffixes, emails} → unified {entries}
-  if (!Array.isArray(allowlist.entries)) {
-    allowlist.entries = [].concat(allowlist.emails || [], allowlist.suffixes || []);
+  // Strict mode now reuses the trusted-contacts list. Fold any legacy
+  // allowlist entries (old separate list) into vendors, then drop them.
+  const legacy = [].concat(allowlist.entries || [], allowlist.emails || [], allowlist.suffixes || []);
+  if (legacy.length) {
+    const have = new Set(vendors.map(vendorEntry));
+    for (const e of legacy) {
+      const entry = String(e).trim().toLowerCase();
+      if (entry && !have.has(entry)) { vendors.push({ entry }); have.add(entry); }
+    }
   }
-  if (typeof allowlist.enabled !== 'boolean') allowlist.enabled = false;
+  const enabled = typeof allowlist.enabled === 'boolean' ? allowlist.enabled : false;
   return {
-    vendors: s.vendors || [],
-    allowlist: { enabled: allowlist.enabled, entries: allowlist.entries },
+    vendors,
+    allowlist: { enabled },
     settings: s.settings || { safeBrowsingKey: '', consentAccepted: false },
   };
 }
@@ -63,7 +70,7 @@ async function removeVendor(i) {
   renderVendors(vendors);
 }
 
-// ---- Allowlist mode (single unified entries list) ----
+// ---- Strict mode (just a toggle; uses the trusted-contacts list above) ----
 function renderAllowlist(allowlist) {
   const on = !!allowlist.enabled;
   $('allowToggle').checked = on;
@@ -71,38 +78,15 @@ function renderAllowlist(allowlist) {
   const pill = $('strictPill');
   pill.classList.toggle('on', on);
   pill.classList.toggle('off', !on);
-  $('strictText').textContent = on ? 'Strict mode: on' : 'Strict mode: off';
-  const ul = $('allowList');
-  ul.innerHTML = '';
-  if (allowlist.entries.length === 0) ul.innerHTML = '<li><span class="muted">Nothing allowed yet.</span></li>';
-  allowlist.entries.forEach((item, i) => {
-    const li = document.createElement('li');
-    const span = document.createElement('span');
-    span.textContent = item;
-    const del = document.createElement('button');
-    del.className = 'danger';
-    del.textContent = '×';
-    del.addEventListener('click', () => removeEntry(i));
-    li.append(span, del);
-    ul.appendChild(li);
-  });
+  $('strictText').textContent = on ? 'Strict mode: ON' : 'Strict mode: OFF';
 }
 
-async function saveAllowlist(mutate) {
+const toggleAllow = async () => {
   const { allowlist } = await getState();
-  mutate(allowlist);
+  allowlist.enabled = $('allowToggle').checked;
   await chrome.storage.local.set({ allowlist });
   renderAllowlist(allowlist);
-}
-
-const toggleAllow = () => saveAllowlist((a) => { a.enabled = $('allowToggle').checked; });
-const addEntry = () => {
-  const v = $('allowInput').value.trim().toLowerCase();
-  if (!v) return;
-  $('allowInput').value = '';
-  saveAllowlist((a) => { if (!a.entries.includes(v)) a.entries.push(v); });
 };
-const removeEntry = (i) => saveAllowlist((a) => a.entries.splice(i, 1));
 
 // ---- API keys + live status ----
 function renderKeyStatus(settings) {
@@ -110,10 +94,13 @@ function renderKeyStatus(settings) {
   const pill = $('scanPill');
   pill.classList.toggle('on', hasKey);
   pill.classList.toggle('off', !hasKey);
-  $('scanText').textContent = hasKey ? 'Link scan: live' : 'Link scan: off';
-  $('keyState').innerHTML = hasKey
-    ? '<b>Live.</b> Links in emails are checked against Google Safe Browsing.'
-    : '<b>Off.</b> No key yet — links aren’t scanned. Sender, urgency and attachment checks still run.';
+  $('scanText').textContent = hasKey ? 'Link scan: ON' : 'Link scan: OFF';
+  const ks = $('keyState');
+  ks.classList.toggle('live', hasKey);
+  ks.classList.toggle('off', !hasKey);
+  ks.innerHTML = hasKey
+    ? 'Link scanning is <b>ON.</b> <br/> Links in emails are checked against Google Safe Browsing.'
+    : 'Link scanning is <b>OFF.</b> <br/> No key yet — links aren’t scanned.';
 }
 
 async function saveKeys() {
@@ -128,6 +115,9 @@ async function saveKeys() {
 // ---- Init ----
 (async () => {
   const state = await getState();
+  // Persist the migrated shape (folds legacy allowlist entries into vendors,
+  // drops the old separate list) so content.js and storage stay in sync.
+  await chrome.storage.local.set({ vendors: state.vendors, allowlist: state.allowlist });
   renderVendors(state.vendors);
   renderAllowlist(state.allowlist);
   $('sbKey').value = state.settings.safeBrowsingKey || '';
@@ -135,6 +125,5 @@ async function saveKeys() {
 
   $('addVendor').addEventListener('click', addVendor);
   $('allowToggle').addEventListener('change', toggleAllow);
-  $('addAllow').addEventListener('click', addEntry);
   $('saveKeys').addEventListener('click', saveKeys);
 })();

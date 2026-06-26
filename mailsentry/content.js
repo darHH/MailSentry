@@ -86,7 +86,7 @@
       chrome.storage.local.get(['vendors', 'allowlist', 'settings'], (s) => {
         resolve({
           vendors: s.vendors || [],
-          allowlist: s.allowlist || { enabled: false, suffixes: [], emails: [] },
+          allowlist: s.allowlist || { enabled: false },
           settings: s.settings || {},
         });
       });
@@ -192,7 +192,7 @@
         text: `The name shown is “<b>${esc(parsed.displayName)}</b>” but the real address is <b>${esc(parsed.address)}</b> — they don’t match. Anyone can set any display name.` });
     } else if (sig.allowlist >= 1) {
       rows.push({ id: 'domain', state: 'bad', name: 'Sender',
-        text: `<b>${esc(parsed.address)}</b> is not on your approved-senders allowlist.` });
+        text: `Strict mode is on and <b>${esc(parsed.address)}</b> is not one of your trusted contacts.` });
     } else {
       rows.push({ id: 'domain', state: 'ok', name: 'Sender',
         text: `<b>${esc(parsed.address || parsed.domain)}</b> — no signs of impersonation.` });
@@ -267,7 +267,7 @@
     const order = { bad: 0, off: 1, ok: 2 };
     checks.sort((a, b) => order[a.state] - order[b.state]);
 
-    const iconFor = { bad: '&#9888;&#65039;', off: '&#9899;', ok: '&#10003;' };
+    const iconFor = { bad: '&#9888;&#65039;', off: '&#9679;', ok: '&#10003;' };
     const rowsHtml = checks.map((c) =>
       `<div class="chk ${c.state}">
          <span class="ci">${iconFor[c.state]}</span>
