@@ -62,10 +62,25 @@
 
   function getLinks(bodyEl) {
     if (!bodyEl) return [];
-    const urls = $all('a[href]', bodyEl)
-      .map((a) => a.getAttribute('href'))
-      .filter((h) => h && /^https?:\/\//i.test(h));
-    return Array.from(new Set(urls));
+    const urls = new Set();
+
+    for (const a of $all('a[href]', bodyEl)) {
+      const href = a.getAttribute('href');
+      if (href && /^https?:\/\//i.test(href)) urls.add(href);
+    }
+
+    // Also scan the rendered text. Catches bare URLs and Gmail-defanged
+    // anchors where Safe Browsing stripped the href but left the visible URL
+    // (often split by <wbr>, which textContent collapses across).
+    const text = bodyEl.textContent || '';
+    const re = /\bhttps?:\/\/[^\s<>"')]+/gi;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const cleaned = m[0].replace(/[.,;:!?)\]}>'"]+$/, '');
+      if (cleaned) urls.add(cleaned);
+    }
+
+    return Array.from(urls);
   }
 
   function getImages(bodyEl) {
