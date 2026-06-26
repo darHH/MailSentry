@@ -195,7 +195,15 @@
     const rows = [];
 
     // 1. Sender
-    if (sig.lookalike >= 1) {
+    // Priority: strict + lookalike (combined) → lookalike → nameMismatch → strict alone
+    if (sig.allowlist >= 1 && sig.lookalike >= 1) {
+      const mv = vendorMatch && vendorMatch.vendor;
+      const vn = mv
+        ? esc(mv.name || Domain.vendorScope(mv).email || Domain.vendorScope(mv).domain)
+        : 'a saved contact';
+      rows.push({ id: 'domain', state: 'bad', name: 'Sender',
+        text: `Strict mode is on and <b>${esc(parsed.address)}</b> is not in your trusted contacts — and it's a near-copy of your saved contact <b>${vn}</b>, only a character or two different. Likely impersonation: confirm before trusting.` });
+    } else if (sig.lookalike >= 1) {
       const mv = vendorMatch && vendorMatch.vendor;
       const vn = mv
         ? esc(mv.name || Domain.vendorScope(mv).email || Domain.vendorScope(mv).domain)
