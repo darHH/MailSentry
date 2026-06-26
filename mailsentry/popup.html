@@ -95,8 +95,15 @@
 
     /* Strict-mode warning + key state — shared status-box look */
     .warn, .keystate { margin: 0; padding: 8px 10px; border-radius: 8px; font-size: 11px; }
-    .warn { display: none; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+    .warn { display: none; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; margin-top: 8px; }
     .warn.show { display: block; }
+
+    /* Sub-section divider (e.g. Strict mode inside Trusted contacts) */
+    .subsection { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .subsection-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .subsection-head h4 { margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+    .subsection-head h4 .ic { font-size: 14px; }
+    .subsection .what { margin: 4px 0 0; }
     .keystate { margin-top: 8px; }
     .keystate b { font-weight: 600; }
     .keystate.live { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
@@ -122,7 +129,7 @@
   <div class="card">
     <div class="card-head">
       <h3><span class="ic">&#129309;</span> Trusted contacts</h3>
-      <p class="what">Add people and companies you work with here. <br/> MailSentry warns you when an email is from a <b>look-alike</b> of one of these addresses.</p>
+      <p class="what">Add people and companies you work with. We'll warn you about emails from <b>look-alikes</b> of these addresses.</p>
     </div>
     <div class="body">
       <ul class="list" id="vendorList"></ul>
@@ -134,20 +141,15 @@
         <p><code>@domain.com</code> covers <b>all addresses</b> with @domain.com</p>
         <p><code>name@domain</code> covers <b>exact address</b> only</p>
       </div>
-    </div>
-  </div>
 
-  <!-- STRICT MODE ----------------------------------------------------- -->
-  <div class="card">
-    <div class="card-head with-toggle">
-      <div>
-        <h3><span class="ic">&#128274;</span> Strict mode</h3>
-        <p class="what">Flag <b>every</b> sender who isn’t one of your trusted contacts above.</p>
+      <div class="subsection">
+        <div class="subsection-head">
+          <h4><span class="ic">&#128274;</span> Strict mode</h4>
+          <label class="switch"><input type="checkbox" id="allowToggle" /><span class="slider"></span></label>
+        </div>
+        <p class="what">Also flag <b>every</b> sender who isn't in this list.</p>
+        <div class="warn" id="strictWarn">Strict mode is <b>ON</b> <br/> Anyone not in this list will be flagged</div>
       </div>
-      <label class="switch"><input type="checkbox" id="allowToggle" /><span class="slider"></span></label>
-    </div>
-    <div class="body">
-      <div class="warn" id="strictWarn">Strict mode is <b>ON</b> <br/> Anyone not in your trusted contacts will be flagged</div>
     </div>
   </div>
 

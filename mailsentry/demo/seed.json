@@ -1,6 +1,6 @@
 {
   "vendors": [
-    { "entry": "@acme.com" },
+    { "entry": "@yourcompany.com" },
     { "entry": "jane@gmail.com" }
   ]
 }
