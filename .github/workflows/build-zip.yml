@@ -1,0 +1,49 @@
+name: Rebuild mailsentry.zip
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mailsentry/**'
+      - '.github/workflows/build-zip.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rebuild docs/mailsentry.zip
+        run: |
+          python3 - <<'PY'
+          import zipfile, os
+          src = 'mailsentry'
+          out = 'docs/mailsentry.zip'
+          EXCLUDE_DIRS = {'demo'}
+          EXCLUDE_SUFFIX = ('.test.js', '.DS_Store')
+          with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
+              for root, dirs, files in os.walk(src):
+                  dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+                  for f in sorted(files):
+                      if f.endswith(EXCLUDE_SUFFIX):
+                          continue
+                      p = os.path.join(root, f)
+                      z.write(p, p)
+          PY
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet docs/mailsentry.zip; then
+            echo "Zip already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/mailsentry.zip
+          git commit -m "ci: rebuild docs/mailsentry.zip"
+          git push
