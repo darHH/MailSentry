@@ -1,0 +1,5 @@
+{
+  "_note": "HAND-AUTHORED placeholder. Freemail senders (@gmail.com etc.) are GATED OUT before any Exa call (plan §4.1) — the identity isn't in the domain, so Exa can't assess it. Test #7 asserts shouldQueryExa() returns call:false for freemail, i.e. fetchExa is never reached. This response is what we'd never bother fetching; kept only so the fixture set is complete.",
+  "results": []
+}
+

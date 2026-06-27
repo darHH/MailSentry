@@ -11,6 +11,7 @@
 
   // --- util globals (attached by utils/*.js, loaded before this file) ---
   const Domain = self.MailDomainCheck;
+  const Exa = self.MailExaCheck;
   const Urgency = self.MailUrgency;
   const Links = self.MailLinkScanner;
   const Attach = self.MailAttachment;
@@ -134,12 +135,35 @@
     return null;
   }
 
+  // Exa sender web-check (plan §4). Gated, then relayed through the background
+  // worker (content scripts can't reach api.exa.ai — no CORS header). Returns a
+  // scored result, or null when skipped / no key / unavailable. Never throws:
+  // Exa being down must never break the banner (plan §9).
+  async function exaWebCheck(parsed, currentDomainScore, vendors) {
+    const vendorDomains = vendors
+      .map((v) => Domain.vendorScope(v))
+      .filter((sc) => sc.kind === 'domain' && sc.domain)
+      .map((sc) => sc.domain);
+    const gate = Exa.shouldQueryExa(parsed.domain, { vendorDomains, currentDomainScore });
+    if (!gate.call) return null;
+    try {
+      const out = await chrome.runtime.sendMessage({ type: 'exaFetch', senderDomain: parsed.domain });
+      if (!out || out.stubbed || !out.response) return null;
+      return Exa.scoreExaResponse(out.response, parsed.domain);
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Run all five checks → composite. Returns { result, parsed, signals }.
   async function analyze(email, state) {
     const parsedRes = Domain.domainScore(email.senderRaw, {
       vendors: state.vendors,
       allowlist: state.allowlist,
     });
+    // Fourth sender sub-signal: fold Exa into domainScore's max (plan §3).
+    const exa = await exaWebCheck(parsedRes.parsed, parsedRes.score, state.vendors);
+    const domainComposite = exa ? Math.max(parsedRes.score, exa.exaScore) : parsedRes.score;
     const urgency = Urgency.urgencyScore(email.subject, email.body);
     const attach = Attach.attachmentScore({
       hasAttachment: email.attachmentNames.length > 0,
@@ -158,7 +182,7 @@
       : { score: 0, stubbed: !apiKey };
 
     const result = Risk.compositeScore({
-      domain: parsedRes.score,
+      domain: domainComposite,
       urgency: urgency.score,
       link: link.score,
       attachment: attach.score,
@@ -168,7 +192,7 @@
     return {
       result,
       parsed: parsedRes.parsed,
-      raw: { domain: parsedRes, urgency, link, attach, qr },
+      raw: { domain: parsedRes, exa, urgency, link, attach, qr },
     };
   }
 
@@ -219,6 +243,19 @@
     } else {
       rows.push({ id: 'domain', state: 'ok', name: 'Sender',
         text: `<b>${esc(parsed.address || parsed.domain)}</b> — no signs of impersonation.` });
+    }
+
+    // 1b. Web check (Exa) — only shown when it actually ran for this sender.
+    const exa = raw.exa;
+    if (exa) {
+      if (exa.exaScore >= 0.5) {
+        rows.push({ id: 'exa', state: 'bad', name: 'Exa web-check', text: esc(exa.reason) });
+      } else if (exa.thin) {
+        rows.push({ id: 'exa', state: 'off', name: 'Exa web-check',
+          text: 'No established web presence found for this sender — treat unfamiliar payment requests with extra caution.' });
+      } else {
+        rows.push({ id: 'exa', state: 'ok', name: 'Exa web-check', text: esc(exa.reason) });
+      }
     }
 
     // 2. Urgency / pressure wording
@@ -300,7 +337,8 @@
 
     // "Main reason" = the problem that pushed the score up the most.
     const contribBy = {
-      domain: result.breakdown.domain, urgency: result.breakdown.urgency,
+      domain: result.breakdown.domain, exa: result.breakdown.domain,
+      urgency: result.breakdown.urgency,
       link: result.breakdown.link, attach: result.breakdown.attachment, qr: result.breakdown.qr,
     };
     const bad = checks.filter((c) => c.state === 'bad')

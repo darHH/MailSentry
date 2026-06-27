@@ -24,7 +24,7 @@ async function getState() {
   return {
     vendors,
     allowlist: { enabled },
-    settings: s.settings || { safeBrowsingKey: '', consentAccepted: false },
+    settings: s.settings || { safeBrowsingKey: '', exaApiKey: '', consentAccepted: false },
   };
 }
 
@@ -112,6 +112,29 @@ async function saveKeys() {
   setTimeout(() => ($('keysSaved').textContent = ''), 1500);
 }
 
+function renderExaStatus(settings) {
+  const hasKey = !!(settings.exaApiKey || '').trim();
+  const pill = $('exaPill');
+  pill.classList.toggle('on', hasKey);
+  pill.classList.toggle('off', !hasKey);
+  $('exaText').textContent = hasKey ? 'Exa web-check: ON' : 'Exa web-check: OFF';
+  const ks = $('exaKeyState');
+  ks.classList.toggle('live', hasKey);
+  ks.classList.toggle('off', !hasKey);
+  ks.innerHTML = hasKey
+    ? 'Exa web-check is <b>ON.</b> <br/> Unknown senders are checked against the live web.'
+    : 'Exa web-check is <b>OFF.</b> <br/> No key yet — unknown senders aren’t web-checked.';
+}
+
+async function saveExa() {
+  const { settings } = await getState();
+  settings.exaApiKey = $('exaKey').value.trim();
+  await chrome.storage.local.set({ settings });
+  renderExaStatus(settings);
+  $('exaSaved').textContent = 'Saved ✓';
+  setTimeout(() => ($('exaSaved').textContent = ''), 1500);
+}
+
 // ---- Init ----
 (async () => {
   const state = await getState();
@@ -122,8 +145,11 @@ async function saveKeys() {
   renderAllowlist(state.allowlist);
   $('sbKey').value = state.settings.safeBrowsingKey || '';
   renderKeyStatus(state.settings);
+  $('exaKey').value = state.settings.exaApiKey || '';
+  renderExaStatus(state.settings);
 
   $('addVendor').addEventListener('click', addVendor);
   $('allowToggle').addEventListener('change', toggleAllow);
   $('saveKeys').addEventListener('click', saveKeys);
+  $('saveExa').addEventListener('click', saveExa);
 })();

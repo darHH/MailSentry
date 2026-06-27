@@ -44,6 +44,7 @@
     .card-head.with-toggle { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
     h3 { margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
     h3 .ic { font-size: 15px; }
+    h3 .opt { font-size: 11px; font-weight: 500; color: var(--muted); }
     .what { color: var(--muted); font-size: 12px; margin: 5px 0 0; }
     .body { padding: 10px 14px 14px; }
 
@@ -123,6 +124,7 @@
   <div class="status">
     <span class="pill" id="scanPill"><span class="dot"></span> <span id="scanText">Link scan: off</span></span>
     <span class="pill" id="strictPill"><span class="dot"></span> <span id="strictText">Strict mode: off</span></span>
+    <span class="pill" id="exaPill"><span class="dot"></span> <span id="exaText">Exa web-check: off</span></span>
   </div>
 
   <!-- TRUSTED CONTACTS ------------------------------------------------ -->
@@ -156,8 +158,8 @@
   <!-- LINK SCANNING (API KEYS) ---------------------------------------- -->
   <div class="card">
     <div class="card-head">
-      <h3><span class="ic">&#128279;</span> Link scanning</h3>
-      <p class="what">Optional. Add a free <b>Google Safe Browsing</b> key to check links in emails against known scam sites.</p>
+      <h3><span class="ic">&#128279;</span> Link scanning <span class="opt">(Optional)</span></h3>
+      <p class="what">Add a free <b>Google Safe Browsing</b> key to check links in emails against known scam sites.</p>
     </div>
     <div class="body">
       <div class="row">
@@ -166,6 +168,22 @@
         <span class="saved" id="keysSaved"></span>
       </div>
       <div class="keystate" id="keyState"></div>
+    </div>
+  </div>
+
+  <!-- SENDER WEB-CHECK (EXA) ------------------------------------------- -->
+  <div class="card">
+    <div class="card-head">
+      <h3><span class="ic">&#127760;</span> Exa web-check <span class="opt">(Optional)</span></h3>
+      <p class="what">Add an <b>Exa</b> key to check unknown senders against the live web.</p>
+    </div>
+    <div class="body">
+      <div class="row">
+        <input type="password" id="exaKey" placeholder="Exa API key" />
+        <button id="saveExa">Save</button>
+        <span class="saved" id="exaSaved"></span>
+      </div>
+      <div class="keystate" id="exaKeyState"></div>
     </div>
   </div>
 

@@ -35,11 +35,13 @@ The five checks:
 
 | Check | What it does | Weight |
 |---|---|---|
-| Sender/Domain | Composite of 3 sub-signals (see below); `domainScore = max` of the three | 0.40 |
-| Urgency | Weighted keyword density in subject + body (fraud psychology) | 0.25 |
-| Link safety | Google Safe Browsing result on extracted URLs (max across all links) | 0.20 |
-| Attachment | Binary: attachment present on a payment-instruction email → 0.5, else 0 | 0.10 |
-| QR code | Decoded QR URL passed through the same link scanner | 0.05 |
+| Sender/Domain | Composite of 4 sub-signals (see below); `domainScore = max` of them | 0.55 |
+| Urgency | Weighted keyword density in subject + body (fraud psychology) | 0.30 |
+| Attachment | Binary: attachment present on a payment-instruction email → 0.5, else 0 | 0.15 |
+| Link safety | Google Safe Browsing result on extracted URLs (max across all links) | ground-truth override |
+| QR code | Decoded QR URL passed through the same link scanner | ground-truth override |
+
+> Weights sum to 1.0 over the three **heuristic** signals (0.55/0.30/0.15). Link & QR are **not** in the weighted sum — a Safe Browsing hit on either forces composite = 1.0 (override). See §5.
 
 **Sender/Domain sub-signals** (the 0.40 weight is the *max* of these — any one firing high flags the email):
 
@@ -49,6 +51,9 @@ The five checks:
    - Rationale: B2B fraud spoofs the company (domain); local-parts vary legitimately (`billing@`/`accounts@`), so domain-only is right there. Personal/freemail contacts share a domain and their identity is the local-part, so those need address-level. `domainCheck.vendorScope()` (via `parseScopeEntry()`) decides per vendor; an exact match (domain or address) is treated as the real sender → safe.
 2. **Display-name vs email mismatch.** Compare the sender's *display name* against its *actual email address*. The "brand" to match against is derived from each trusted contact's **domain** (`brandTokens()`, e.g. `@acme-supplies.com` → `acme`,`supplies`) — no separate vendor name is stored. If the display name claims that brand but the address domain is unrelated (e.g. `"Acme Supplies" <random123@gmail.com>`), flag. Catches the case where the address itself isn't a lookalike — the attacker just sets a convincing display name on a throwaway inbox.
 3. **Allowlist mode (optional, user toggle).** When enabled, *only* senders matching an allowlist **entry** pass; any sender outside scores high. Entries use the same unified format as vendors (see below): `@acme.com` = the whole domain (and its subdomains), `jo@acme.com` = one exact address. Strict opt-in for finance users who only correspond with a known set — flips the model from "flag the suspicious" to "flag everything not pre-approved."
+4. **Exa web-check (optional, needs Exa API key).** The other three only know senders the user *seeded*; they're blind to a sender the user has **never heard of** — which is most real BEC. `exaCheck.js` checks an unknown corporate sender against the **live web**: does an established company exist behind a domain like this, and does the sender's domain actually match where that company really lives online? Gated (plan §4): skipped for freemail, for seeded vendors, and when an earlier sub-signal already maxed the score. Two halves — `fetchExa` (impure network, relayed through `background.js` because `api.exa.ai` sends no CORS header, so a content-script fetch is blocked) and `scoreExaResponse` (pure, deterministic, unit-tested on real captures in `demo/exa-fixtures/`).
+   - **THE CRITICAL GOTCHA:** Exa matches on *meaning, not exact string* — querying a lookalike (`ceocoachinternational.info`) returns results about the *real* `ceocoachinginternational.com`. So rich Exa data describes the company being **impersonated**, NOT the sender. The verdict therefore comes from the **MISMATCH** between the canonical domain Exa resolves and the actual sender domain — never from the mere presence of data. Canonical domain = **consensus** of result URLs (≥60% + strict winner; ties/scatter → "thin"); depth (workforce/web-traffic) only scales confidence in a mismatch, never flags alone.
+   - **Honest limits (encoded in code comments):** Exa is **not WHOIS** (no real domain-age — any WHOIS text leaking into result bodies is ignored); **absence of footprint ≠ guilt** (a brand-new legit vendor looks identical to a fresh scam domain, so a thin footprint only *nudges* — `THIN_FOOTPRINT_WEAK = 0.25`); the signal is always *relative* (sender vs resolved entity), never *absolute*. One input to a composite, never a standalone verdict. Retrieval is non-deterministic; only the scorer is.
 
 > **Unified entry format (vendors + allowlist).** One text box, one rule: a string starting with `@` is a **domain** entry (`@acme.com`); a string with text before the `@` is an **exact email** entry (`jo@acme.com`); a bare string with no `@` is treated as a domain. Parsed by `domainCheck.parseScopeEntry()`. For *vendors* the entry drives lookalike granularity (domain entry → compare domains; email entry → compare whole addresses). For the *allowlist* it drives pass/fail matching (domain entry → domain or subdomain match; email entry → exact-address match).
 
@@ -125,7 +130,7 @@ const safeBrowsingHit = (linkScore >= 1.0) || (qrScore >= 1.0);
 // Heuristic fallback. Weighted sum of the three heuristic signals only
 // (link/qr live in the override above, not in this sum). Weights sum to 1.0.
 const weightedSum = (
-  domainScore     * 0.55 +   // max of: lookalike (Levenshtein) | display-name↔email mismatch | allowlist-mode violation
+  domainScore     * 0.55 +   // max of: lookalike (Levenshtein) | display-name↔email mismatch | allowlist-mode violation | Exa web-check mismatch
   urgencyScore    * 0.30 +   // Weighted keyword density in subject + body
   attachmentScore * 0.15     // Binary: attachment present on payment-instruction email → 0.5, else 0
 );
@@ -169,21 +174,23 @@ const checkUrl = async (url, apiKey) => {
 
 ```
 mailsentry/
-  manifest.json                  permissions: storage, activeTab, scripting, *://*.mail.google.com/*
+  manifest.json                  permissions: storage, activeTab, scripting; hosts: *.mail.google.com, api.exa.ai
   content.js                     Gmail DOM parser + orchestrator (calls all checks, injects banner)
-  background.js                  seed storage on install
+  background.js                  seed storage on install + Exa fetch relay (CORS-bypassed)
   onboarding.html / onboarding.js  first-run consent screen
   privacy.html                   bundled privacy policy page (linked from onboarding)
-  popup.html / popup.js          whitelist manager + API key settings
+  popup.html / popup.js          whitelist manager + API key settings (Safe Browsing + Exa)
   utils/
     levenshtein.js               domain fuzzy-match helper (pure)
     domainCheck.js               sender/domain score: lookalike + display-name mismatch + allowlist mode
+    exaCheck.js                  Exa web-check: fetchExa (impure, relayed) + scoreExaResponse (pure)
     urgency.js                   keyword list + weighted scorer
     linkScanner.js               Google Safe Browsing API call
     attachmentCheck.js           DOM parse for attachments
     qrExtractor.js               jsQR decode + pass to linkScanner
     risk.js                      composite score formula
   demo/seed.json                 5 vendors: { entry }
+  demo/exa-fixtures/             real Exa /search captures for tests + offline demo
   README.md                      setup instructions for judges
 ```
 
@@ -236,10 +243,10 @@ mailsentry/
 - ✅ **Phase 3 LIVE TUNING done (2026-06-26)** — selectors (`h2.hP`, `span.gD[email]`, `div.a3s`, `span.aV3`) confirmed against real Gmail; banner renders correctly. No BRITTLE ZONE changes needed.
 - ⬜ Open decision #2 (demo mode) still deferred.
 
-**Storage schema (set by background.js):** `vendors:[{entry}]` (entry = `@domain` or `email`; no name field — legacy `{name,domain}`/`{email}` still read), `allowlist:{enabled,entries[]}` (legacy `suffixes`/`emails` auto-migrated on read), `settings:{safeBrowsingKey,consentAccepted}`. Content-script orchestrator passes `vendors`/`allowlist` into `domainScore()` and `settings.safeBrowsingKey` into `linkScore()`. Entry parsing is centralised in `domainCheck.parseScopeEntry()` / `vendorScope()`.
+**Storage schema (set by background.js):** `vendors:[{entry}]` (entry = `@domain` or `email`; no name field — legacy `{name,domain}`/`{email}` still read), `allowlist:{enabled,entries[]}` (legacy `suffixes`/`emails` auto-migrated on read), `settings:{safeBrowsingKey,exaApiKey,consentAccepted}`. Content-script orchestrator passes `vendors`/`allowlist` into `domainScore()`, `settings.safeBrowsingKey` into `linkScore()`, and `settings.exaApiKey` (read worker-side) drives the Exa relay. Entry parsing is centralised in `domainCheck.parseScopeEntry()` / `vendorScope()`.
 
 **Util module pattern:** each util is a UMD-ish IIFE — attaches to a `Mail*` global (for content-script use) AND `module.exports` (for Node tests). Tests are zero-dep `*.test.js` plain asserts; run `node mailsentry/utils/<name>.test.js` or loop all with `for t in *.test.js; do node "$t"; done`. Network/DOM modules take injectable `fetch`/`jsQR`/`document` for testability.
 
-**Next step:** Phase 3 fully done (live tuning confirmed 2026-06-26). **Phase 4 LLM explain layer SKIPPED (2026-06-26)** — `buildChecks()` already produces a plain-English row per check deterministically, so an LLM call would duplicate existing output, weaken the privacy pitch, and add a demo-day failure mode; all OpenAI/GPT-4o references then removed from code and docs. **Phase 4 privacy policy page DONE (2026-06-26)** — bundled as `mailsentry/privacy.html` (extension-local instead of GitHub Pages, robust offline) and wired into the onboarding "Privacy policy" link. **Risk formula reworked (2026-06-26)** — link/qr removed from the weighted sum and reframed as a Safe Browsing ground-truth override (hit → composite 1.0), heuristic weights rescaled to 0.55/0.30/0.15 (domain/urgency/attachment), and the numeric risk % removed from the visible banner UI (verdict label + breakdown rows carry the UX). **Safe Browsing error path fixed (2026-06-26)** — `linkScanner.js` no longer silently swallows 4xx/error responses as "no hit"; HTTP failures and `data.error` bodies now return `{ stubbed:true, error:<message> }`, and the banner's link row distinguishes "no key" (existing copy) from "key rejected" (new copy pointing the user back to settings). 17/17 linkScanner tests, 34/34 risk tests, 7/7 suites overall pass. Real next work: Phase 5 demo prep (2 test emails: clean + lookalike attack), resolve open decision #2 (demo fallback mode), and close the local-part-on-trusted-domain detection gap.
+**Next step:** Phase 3 fully done (live tuning confirmed 2026-06-26). **Phase 4 LLM explain layer SKIPPED (2026-06-26)** — `buildChecks()` already produces a plain-English row per check deterministically, so an LLM call would duplicate existing output, weaken the privacy pitch, and add a demo-day failure mode; all OpenAI/GPT-4o references then removed from code and docs. **Phase 4 privacy policy page DONE (2026-06-26)** — bundled as `mailsentry/privacy.html` (extension-local instead of GitHub Pages, robust offline) and wired into the onboarding "Privacy policy" link. **Risk formula reworked (2026-06-26)** — link/qr removed from the weighted sum and reframed as a Safe Browsing ground-truth override (hit → composite 1.0), heuristic weights rescaled to 0.55/0.30/0.15 (domain/urgency/attachment), and the numeric risk % removed from the visible banner UI (verdict label + breakdown rows carry the UX). **Safe Browsing error path fixed (2026-06-26)** — `linkScanner.js` no longer silently swallows 4xx/error responses as "no hit"; HTTP failures and `data.error` bodies now return `{ stubbed:true, error:<message> }`, and the banner's link row distinguishes "no key" (existing copy) from "key rejected" (new copy pointing the user back to settings). 17/17 linkScanner tests, 34/34 risk tests, 7/7 suites overall pass. **Exa web-check integration DONE (2026-06-27)** — new 4th sender sub-signal closing the unknown-sender BEC blind spot: `utils/exaCheck.js` (pure `scoreExaResponse` + gate + relayed `fetchExa`) with 32 asserts over **real** Exa `/search` captures in `demo/exa-fixtures/`; folded into `domainScore` via `max` in `content.js` (zero behavior change when no Exa key — `max(x,0)=x`); gated per plan §4 (freemail / seeded-vendor / already-maxed skip); relayed through `background.js` because `api.exa.ai` returns no `access-control-allow-origin` so a content-script fetch is CORS-blocked; popup gains an Exa key field (`settings.exaApiKey`) mirroring the Safe Browsing one; `host_permissions` += `https://api.exa.ai/*`. Canonical = result-URL **consensus** (the real /search shape has no `entity.homepage`; depth lives at `entity.properties.{workforce,webTraffic}`). Verified end-to-end offline: unknown lookalike sender (existing checks score 0) → Exa 1.0 → composite 0.55 → RED. 8/8 suites pass (163 asserts). Deferred: P4 cache-by-domain TTL (TODO in `fetchExa`); live Gmail tuning of the Exa banner row. Real next work: Phase 5 demo prep (2 test emails: clean + lookalike attack), resolve open decision #2 (demo fallback mode), and close the local-part-on-trusted-domain detection gap.
 
 > When you finish a work session, update this section: what got done, what's in progress, and the single clearest "next step."

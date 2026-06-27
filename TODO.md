@@ -56,6 +56,19 @@
 - [x] Scoped styling (Shadow DOM / inline CSS) to avoid Gmail CSS collisions
 - [x] **LIVE TUNING (needs real Gmail):** confirm Gmail selectors (`h2.hP`, `span.gD[email]`, `div.a3s`, `span.aV3`) resolve on your account; adjust BRITTLE ZONE if banner doesn't appear — user confirmed banner renders on real Gmail; no selector changes needed
 
+## Phase 4.5 — Exa web-check (4th sender sub-signal; unknown-sender BEC blind spot)
+
+> See the Exa integration master plan. Adds ONE sub-signal folded into `domainScore`'s `max`; no change to the composite formula, threshold, or banner primitives.
+
+- [x] **P0** Exa API key field in popup (`settings.exaApiKey`, mirrors Safe Browsing); confirm `domainScore`/`risk` interfaces (domainScore weight is 0.55; pure+sync, so Exa folds in via `opts`/orchestrator, not inside the fn)
+- [x] **P1** Capture 4 real Exa fixtures into `demo/exa-fixtures/` (lookalike / legit / no-footprint / freemail-skip)
+- [x] **P2** `scoreExaResponse` (pure) + frozen constants + broker/social exclude + deterministic consensus selection (real /search shape: canonical = URL consensus, depth at `entity.properties.*`)
+- [x] **P3** `exaCheck.test.js` — 32 asserts over real fixtures, all green before wiring
+- [x] **P4** `fetchExa` (impure, injected, 1.5s timeout) relayed through `background.js` (api.exa.ai has no CORS header). *Cache-by-domain TTL still TODO in `fetchExa`.*
+- [x] **P5** Fold `exaScore` into `domainScore` max + gating (§4) in `content.js`; add `buildChecks()` "Web check" row
+- [x] **P6** Graceful degradation: gate/no-key/error → Exa contributes null, banner never hard-fails (`max(x,0)=x`)
+- [x] **P7** Update CONTEXT.md (sub-signal, gotcha, limits, file tree, status) + this checklist
+
 ## Phase 4 — Stretch (only after core is solid)
 
 - [x] ~~`utils/openai.js` — GPT-4o `explain()` — domain pair only, plain-English explanation, one call per flagged email~~ — **SKIPPED (2026-06-26):** `buildChecks()` in `content.js` already produces a plain-English sentence per check (deterministic, no hallucination risk). Adding an LLM layer would (1) duplicate existing explanations, (2) weaken the privacy pitch by POSTing email content to a third party, (3) introduce a demo-day failure mode (rate limits, flaky wifi, revoked key). No added user value for a hackathon. Revisit only if an AI-specific prize/track requires it.
