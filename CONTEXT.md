@@ -231,7 +231,7 @@ mailsentry/
 
 ## 10. Current status — where we left off
 
-**Last updated:** 2026-06-25 (build session 1)
+**Last updated:** 2026-06-27
 
 - ✅ Project scoped. CONTEXT.md + TODO.md created.
 - ✅ **Phase 0 scaffold done** — `mailsentry/` file tree, MV3 `manifest.json` (storage/activeTab/scripting + `*://*.mail.google.com/*`, content scripts in dependency order, popup, onboarding as options_page), root `.gitignore` (key/secret excludes), `README.md` (load-unpacked + test instructions), `demo/seed.json` (5 SG vendors).
