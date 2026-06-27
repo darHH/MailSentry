@@ -137,21 +137,28 @@
 
   // Exa sender web-check (plan §4). Gated, then relayed through the background
   // worker (content scripts can't reach api.exa.ai — no CORS header). Returns a
-  // scored result, or null when skipped / no key / unavailable. Never throws:
-  // Exa being down must never break the banner (plan §9).
+  // STATUS object so the banner can explain what happened — never throws (Exa
+  // being down must never break the banner, plan §9):
+  //   { status:'skipped', reason }      gate said no (freemail / trusted / already-flagged)
+  //   { status:'off' }                  no Exa key set
+  //   { status:'unavailable' }          fetch failed / timed out
+  //   { status:'scored', result }       ran; result = scoreExaResponse output
+  // Only 'scored' contributes to the score (result.exaScore); the rest are
+  // informational and leave domainScore untouched.
   async function exaWebCheck(parsed, currentDomainScore, vendors) {
     const vendorDomains = vendors
       .map((v) => Domain.vendorScope(v))
       .filter((sc) => sc.kind === 'domain' && sc.domain)
       .map((sc) => sc.domain);
     const gate = Exa.shouldQueryExa(parsed.domain, { vendorDomains, currentDomainScore });
-    if (!gate.call) return null;
+    if (!gate.call) return { status: 'skipped', reason: gate.reason };
     try {
       const out = await chrome.runtime.sendMessage({ type: 'exaFetch', senderDomain: parsed.domain });
-      if (!out || out.stubbed || !out.response) return null;
-      return Exa.scoreExaResponse(out.response, parsed.domain);
+      if (out && out.response) return { status: 'scored', result: Exa.scoreExaResponse(out.response, parsed.domain) };
+      // stubbed: no key → 'off'; error present → 'unavailable'
+      return { status: out && out.error ? 'unavailable' : 'off' };
     } catch (e) {
-      return null;
+      return { status: 'unavailable' };
     }
   }
 
@@ -162,8 +169,11 @@
       allowlist: state.allowlist,
     });
     // Fourth sender sub-signal: fold Exa into domainScore's max (plan §3).
+    // Only a 'scored' result moves the needle; skipped/off/unavailable don't.
     const exa = await exaWebCheck(parsedRes.parsed, parsedRes.score, state.vendors);
-    const domainComposite = exa ? Math.max(parsedRes.score, exa.exaScore) : parsedRes.score;
+    const domainComposite = exa.status === 'scored'
+      ? Math.max(parsedRes.score, exa.result.exaScore)
+      : parsedRes.score;
     const urgency = Urgency.urgencyScore(email.subject, email.body);
     const attach = Attach.attachmentScore({
       hasAttachment: email.attachmentNames.length > 0,
@@ -218,8 +228,34 @@
     const sig = raw.domain.signals;
     const rows = [];
 
-    // 1. Sender
-    // Priority: strict + lookalike (combined) → lookalike → nameMismatch → strict alone
+    // 1. Sender — impersonation verdict, with the Exa web-check folded in as a
+    // concise second clause (or as the headline when Exa is what flagged it).
+    // exaTail() = a short trailing sentence describing what the web-check did,
+    // appended only to the OK row so two outcomes read as one ("no impersonation
+    // + web-check passed", or "+ skipped: free webmail").
+    const exa = raw.exa;
+    function exaTail() {
+      if (!exa) return '';
+      if (exa.status === 'skipped') {
+        if (exa.reason === 'freemail') return ' Web-check skipped: this is a personal webmail address from a public provider, not a company domain.';
+        if (exa.reason === 'seeded vendor') return ' It’s one of your saved trusted domains.';
+        return ''; // 'verdict already reached' — the flag above already says why
+      }
+      if (exa.status === 'off') return ' Web-check off — add an Exa key in settings to vet unknown senders.';
+      if (exa.status === 'unavailable') return ' Web-check couldn’t run just now.';
+      if (exa.status === 'scored') {
+        const r = exa.result;
+        if (r.thin) return ' Web-check found no established web presence — be cautious with unfamiliar payment requests.';
+        return r.canonicalDomain
+          ? ` Web-check passed: matches the real <b>${esc(r.canonicalDomain)}</b> online.`
+          : ' Web-check passed against the live web.';
+      }
+      return '';
+    }
+
+    // Priority: strict + lookalike (combined) → lookalike → nameMismatch → strict
+    // alone → Exa-flagged → clean. (Existing signals fire first; when one does,
+    // Exa was gated off as "verdict already reached", so no tail is appended.)
     if (sig.allowlist >= 1 && sig.lookalike >= 1) {
       const mv = vendorMatch && vendorMatch.vendor;
       const vn = mv
@@ -240,22 +276,12 @@
     } else if (sig.allowlist >= 1) {
       rows.push({ id: 'domain', state: 'bad', name: 'Sender',
         text: `Strict mode is on and <b>${esc(parsed.address)}</b> is not one of your trusted contacts.` });
+    } else if (exa && exa.status === 'scored' && exa.result.exaScore >= 0.5) {
+      rows.push({ id: 'domain', state: 'bad', name: 'Sender',
+        text: `<b>${esc(parsed.address || parsed.domain)}</b> isn’t one of your saved contacts, and a live web-check flagged it: ${esc(exa.result.reason)} Confirm before trusting it.` });
     } else {
       rows.push({ id: 'domain', state: 'ok', name: 'Sender',
-        text: `<b>${esc(parsed.address || parsed.domain)}</b> — no signs of impersonation.` });
-    }
-
-    // 1b. Web check (Exa) — only shown when it actually ran for this sender.
-    const exa = raw.exa;
-    if (exa) {
-      if (exa.exaScore >= 0.5) {
-        rows.push({ id: 'exa', state: 'bad', name: 'Exa web-check', text: esc(exa.reason) });
-      } else if (exa.thin) {
-        rows.push({ id: 'exa', state: 'off', name: 'Exa web-check',
-          text: 'No established web presence found for this sender — treat unfamiliar payment requests with extra caution.' });
-      } else {
-        rows.push({ id: 'exa', state: 'ok', name: 'Exa web-check', text: esc(exa.reason) });
-      }
+        text: `<b>${esc(parsed.address || parsed.domain)}</b> — no signs of impersonation.${exaTail()}` });
     }
 
     // 2. Urgency / pressure wording
@@ -337,8 +363,7 @@
 
     // "Main reason" = the problem that pushed the score up the most.
     const contribBy = {
-      domain: result.breakdown.domain, exa: result.breakdown.domain,
-      urgency: result.breakdown.urgency,
+      domain: result.breakdown.domain, urgency: result.breakdown.urgency,
       link: result.breakdown.link, attach: result.breakdown.attachment, qr: result.breakdown.qr,
     };
     const bad = checks.filter((c) => c.state === 'bad')

@@ -76,9 +76,12 @@
   const DEEP_WORKFORCE = 25;
   const DEEP_TRAFFIC_MONTHS = 3;
 
-  // Data-broker / aggregator / WHOIS / social / reference domains. These pollute
-  // results and may even supply useful @-format intel, but must NEVER be counted
-  // toward the canonical consensus (plan §5 Step A).
+  // "Multi-tenant" domains — third-party sites that host/list MANY companies, so a
+  // result URL on one is never evidence of where a SINGLE company lives online (the
+  // opposite of a company's own canonical domain). Four kinds: data brokers /
+  // contact aggregators, WHOIS / domain registries, and social / reference sites.
+  // They may still supply useful @-format intel, but must NEVER count toward the
+  // canonical consensus (plan §5 Step A).
   const CONSENSUS_EXCLUDE = new Set([
     // brokers / aggregators
     'zoominfo.com', 'leadiq.com', 'prospeo.io', 'aeroleads.com', 'signalhire.com',
