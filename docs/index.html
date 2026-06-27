@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MailSentry — protecting businesses from email fraud</title>
+  <meta name="description" content="A Chrome extension that catches lookalike-domain scams in email, at the moment a payment decision is made. Fully client-side." />
+  <meta name="theme-color" content="#232323" />
+  <link rel="icon" type="image/png" href="icon-48.png" />
+
+  <style>
+    :root {
+      --bg: #232323;
+      --panel: #2c2c2c;
+      --panel-2: #353535;
+      --border: #3a3a3a;
+      --text: #ffffff;
+      --muted: #b8b8b8;
+      --muted-2: #888888;
+      --accent: #714aa7;
+      --accent-hover: #8a5dc7;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg); color: var(--text);
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+    .wrap { max-width: 880px; margin: 0 auto; padding: 56px 24px 64px; }
+
+    /* Header */
+    .brand {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 32px;
+    }
+    .brand img { width: 26px; height: 26px; }
+    .brand .name { font-weight: 600; font-size: 17px; letter-spacing: -0.005em; }
+
+    h1 {
+      font-size: 36px; line-height: 1.15; letter-spacing: -0.025em;
+      font-weight: 700; margin: 0 0 12px;
+    }
+    h1 .accent { color: var(--accent); }
+    .lede {
+      font-size: 17px; color: var(--muted); margin: 0 0 36px; max-width: 640px;
+    }
+
+    /* Hero row: video + CTA card side by side */
+    .hero-row {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 20px;
+      margin: 0 0 32px;
+    }
+    .hero-row .video { margin: 0; }
+
+    /* Video */
+    .video {
+      position: relative; padding-bottom: 56.25%; height: 0;
+      background: #000; border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .video iframe {
+      position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+    }
+    .video.stub {
+      background: linear-gradient(135deg, #2c2342 0%, #1d1730 100%);
+    }
+    .video.stub .stub-inner {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px; color: var(--muted);
+    }
+    .video.stub .play {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(113, 74, 167, 0.18);
+      border: 1px solid rgba(113, 74, 167, 0.5);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent);
+    }
+    .video.stub .play svg { width: 22px; height: 22px; margin-left: 3px; }
+    .video.stub .stub-label { font-size: 14px; letter-spacing: 0.02em; }
+
+    /* CTA card */
+    .cta-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .cta-card h2 {
+      margin: 0 0 6px;
+      font-size: 20px; font-weight: 600; letter-spacing: -0.015em;
+    }
+    .cta-card .sub { margin: 0 0 18px; }
+    .cta-card .cta { margin: 0; align-self: flex-start; }
+
+    /* CTA button */
+    .cta {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--accent); color: #fff; font-weight: 600;
+      padding: 13px 20px; border-radius: 9px;
+      text-decoration: none; font-size: 15px;
+      transition: background 0.15s ease;
+    }
+    .cta:hover { background: var(--accent-hover); text-decoration: none; color: #fff; }
+    .cta svg { width: 16px; height: 16px; }
+
+    /* Sub label */
+    .sub {
+      color: var(--muted-2); font-size: 14px; margin: 0 0 22px;
+    }
+
+    /* Steps */
+    ol.steps { padding: 0; margin: 0 0 16px; list-style: none; counter-reset: step; }
+    ol.steps > li {
+      counter-increment: step;
+      display: grid; grid-template-columns: 32px 1fr; gap: 14px;
+      padding: 14px 0;
+      border-top: 1px solid var(--border);
+    }
+    ol.steps > li:first-child { border-top: 0; padding-top: 4px; }
+    ol.steps > li::before {
+      content: counter(step);
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--panel); border: 1px solid var(--border);
+      color: var(--accent); font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+    .step-body { color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+    .step-body strong { color: var(--text); font-weight: 600; }
+    .step-body code {
+      background: var(--panel-2); border: 1px solid var(--border);
+      padding: 1px 6px; border-radius: 5px;
+      font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    /* Optional details */
+    .optional {
+      margin-top: 24px;
+      padding: 18px 20px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .optional summary {
+      cursor: pointer; font-weight: 600; font-size: 14.5px;
+      list-style: none; display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+    }
+    .optional summary::after {
+      content: "+"; color: var(--accent); font-size: 18px; font-weight: 400;
+    }
+    .optional[open] summary::after { content: "−"; }
+    .optional summary::-webkit-details-marker { display: none; }
+    .optional .body { margin-top: 14px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .optional .body ol { padding-left: 18px; margin: 8px 0 0; }
+    .optional .body li { margin-bottom: 8px; }
+
+    /* Why card */
+    .why {
+      margin: 48px 0;
+      padding: 20px 22px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .why .stat {
+      font-size: 28px; font-weight: 700; letter-spacing: -0.02em;
+      color: var(--text); margin: 0 0 4px;
+    }
+    .why .stat .unit { color: var(--accent); }
+    .why p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+    .why .src { color: var(--muted-2); font-size: 12px; margin-top: 10px; }
+
+    /* Checks */
+    h2 {
+      font-size: 22px; font-weight: 600; letter-spacing: -0.015em;
+      margin: 0 0 6px;
+    }
+    .checks {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+      margin: 0 0 48px;
+    }
+    .check {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 10px;
+      text-align: center; font-size: 13px; color: var(--muted);
+    }
+    .check .n {
+      display: block; color: var(--accent); font-weight: 700;
+      font-size: 12px; margin-bottom: 4px;
+    }
+
+    footer {
+      margin-top: 56px; padding-top: 22px;
+      border-top: 1px solid var(--border);
+      color: var(--muted-2); font-size: 13px;
+      display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--accent); }
+
+    /* Tablet: stack the hero row */
+    @media (max-width: 760px) {
+      .hero-row { grid-template-columns: 1fr; gap: 16px; }
+      .cta-card { padding: 20px; }
+    }
+
+    /* Mobile */
+    @media (max-width: 560px) {
+      .wrap { padding: 36px 16px 48px; }
+      h1 { font-size: 28px; }
+      .lede { font-size: 16px; margin-bottom: 28px; }
+      .why { margin: 36px 0; padding: 18px 18px; }
+      .why .stat { font-size: 24px; }
+      .checks { grid-template-columns: repeat(2, 1fr); margin-bottom: 36px; }
+      .cta { width: 100%; justify-content: center; padding: 14px 18px; }
+      .cta-card .cta { align-self: stretch; }
+      ol.steps > li { grid-template-columns: 28px 1fr; gap: 12px; padding: 12px 0; }
+      .optional { padding: 16px; }
+      footer { margin-top: 40px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="brand">
+      <img src="icon-48.png" alt="" onerror="this.style.display='none'" />
+      <span class="name">MailSentry</span>
+    </div>
+
+    <h1>Protecting businesses from<br/><span class="accent">email fraud.</span></h1>
+    <p class="lede">A Chrome extension that catches lookalike-domain scams in email — at the moment a payment decision is made. Fully client-side.</p>
+
+    <section class="hero-row">
+      <!-- Demo video stub. Swap with an <iframe src="https://www.youtube.com/embed/<ID>"></iframe>
+           once the pitch-demo cut is uploaded. -->
+      <div class="video stub">
+        <div class="stub-inner">
+          <div class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+          <div class="stub-label">Demo video — coming soon</div>
+        </div>
+      </div>
+
+      <aside class="cta-card">
+        <h2>Try it yourself</h2>
+        <p class="sub">~2 minutes. Same code as the GitHub repo.</p>
+        <a class="cta" href="mailsentry.zip" download>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download mailsentry.zip
+        </a>
+      </aside>
+    </section>
+
+    <ol class="steps">
+      <li><div class="step-body">Unzip <code>mailsentry.zip</code>.</div></li>
+      <li><div class="step-body">Open <code>chrome://extensions</code> in Chrome.</div></li>
+      <li><div class="step-body">Turn on <strong>Developer mode</strong> (top right).</div></li>
+      <li><div class="step-body">Click <strong>Load unpacked</strong> → pick the <code>mailsentry/</code> folder.</div></li>
+      <li><div class="step-body">Accept the consent screen that opens in a new tab.</div></li>
+      <li><div class="step-body">Open Gmail — a banner appears above each email.</div></li>
+    </ol>
+
+    <details class="optional">
+      <summary>Optional: turn on live link scanning</summary>
+      <div class="body">
+        Without an API key, MailSentry still runs the sender, urgency, and attachment checks — only link reputation is off. Keys are per-user and free.
+        <ol>
+          <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener">console.cloud.google.com</a> → enable <strong>Safe Browsing API</strong> → create an API key.</li>
+          <li>Click the MailSentry icon in Chrome → paste the key → Save.</li>
+          <!-- TODO: add Exa API key step once the Exa integration is wired in.
+               Same shape: sign up at dashboard.exa.ai → create key → paste into popup → Save. -->
+        </ol>
+      </div>
+    </details>
+
+    <div class="why">
+      <div class="stat">S$65M<span class="unit"> lost</span></div>
+      <p>by Singapore SMEs to Business Email Compromise in 2023 alone. Awareness can't sharpen human perception past a one-character domain swap — MailSentry stops you at the moment.</p>
+      <div class="src">SPF Annual Scam Brief 2025 · IC3/FBI PSA 2024</div>
+    </div>
+
+    <h2>5 checks in an instant</h2>
+    <p class="sub">All run locally in your browser. Email content never leaves the device.</p>
+    <div class="checks">
+      <div class="check"><span class="n">1</span>Sender domain</div>
+      <div class="check"><span class="n">2</span>Pressure wording</div>
+      <div class="check"><span class="n">3</span>Links</div>
+      <div class="check"><span class="n">4</span>Attachments</div>
+      <div class="check"><span class="n">5</span>QR codes</div>
+    </div>
+
+    <footer>
+      <div>
+        Built by William Nayar &amp; Darren Teo — Wabi-sabi<br/>
+        Trust &amp; Fraud track · 'Sup × OpenAI Build2026
+      </div>
+      <div><a href="https://github.com/darHH/MailSentry" target="_blank" rel="noopener">Source on GitHub →</a></div>
+    </footer>
+
+  </div>
+</body>
+</html>
