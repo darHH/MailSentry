@@ -270,14 +270,13 @@
     </ol>
 
     <details class="optional">
-      <summary>Optional: turn on live link scanning</summary>
+      <summary>Optional: turn on live web checks</summary>
       <div class="body">
-        Without an API key, MailSentry still runs the sender, urgency, and attachment checks — only link reputation is off. Keys are per-user and free.
+        Without API keys, MailSentry still runs the sender, urgency, attachment, and QR checks — only link reputation and sender web-check are off. Both keys are per-user and free.
         <ol>
-          <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener">console.cloud.google.com</a> → enable <strong>Safe Browsing API</strong> → create an API key.</li>
-          <li>Click the MailSentry icon in Chrome → paste the key → Save.</li>
-          <!-- TODO: add Exa API key step once the Exa integration is wired in.
-               Same shape: sign up at dashboard.exa.ai → create key → paste into popup → Save. -->
+          <li><strong>Google Safe Browsing</strong> (checks links against known scam sites): go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener">console.cloud.google.com</a> → enable <strong>Safe Browsing API</strong> → create an API key.</li>
+          <li><strong>Exa</strong> (checks unknown senders against the live web): sign up at <a href="https://dashboard.exa.ai" target="_blank" rel="noopener">dashboard.exa.ai</a> → create an API key.</li>
+          <li>Click the MailSentry icon in Chrome → paste each key into its field → Save. Keys are stored locally in Chrome storage and never sent anywhere except the respective API.</li>
         </ol>
       </div>
     </details>
