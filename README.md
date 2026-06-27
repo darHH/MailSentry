@@ -65,8 +65,7 @@ Full step-by-step with screenshots-in-prose in [`SETUP.md`](./SETUP.md).
 │   └── utils/          pure-JS scoring modules + zero-dep unit tests
 ├── CONTEXT.md          full project brief, decisions, current state
 ├── TODO.md             phased task list
-├── SETUP.md            Chrome setup walkthrough
-└── CLAUDE.md           agent behavioural guidelines for this repo
+└── SETUP.md            Chrome setup walkthrough
 ```
 
 ## Tests
