@@ -16,3 +16,6 @@ Thumbs.db
 # Node (in case tooling is added later)
 node_modules/
 npm-debug.log*
+
+# Local internal notes (not for the repo)
+algorithm.md
