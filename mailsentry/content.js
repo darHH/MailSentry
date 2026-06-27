@@ -280,7 +280,11 @@
       rows.push({ id: 'domain', state: 'bad', name: 'Sender',
         text: `<b>${esc(parsed.address || parsed.domain)}</b> isn’t one of your saved contacts, and a live web-check flagged it: ${esc(exa.result.reason)} Confirm before trusting it.` });
     } else {
-      rows.push({ id: 'domain', state: 'ok', name: 'Sender',
+      // No impersonation, but a live web-check that found no established presence
+      // is a caution (amber), not an all-clear — unknown senders asking for money
+      // are the real-world risk here.
+      const thin = exa && exa.status === 'scored' && exa.result.thin;
+      rows.push({ id: 'domain', state: thin ? 'caution' : 'ok', name: 'Sender',
         text: `<b>${esc(parsed.address || parsed.domain)}</b> — no signs of impersonation.${exaTail()}` });
     }
 
@@ -349,11 +353,11 @@
     const vendorMatch = matchVendor(parsed, state.vendors);
     const checks = buildChecks(analysis, email, vendorMatch);
 
-    // Order: problems first, then "off"/not-scanned, then passed.
-    const order = { bad: 0, off: 1, ok: 2 };
+    // Order: problems first, then cautions, then "off"/not-scanned, then passed.
+    const order = { bad: 0, caution: 1, off: 2, ok: 3 };
     checks.sort((a, b) => order[a.state] - order[b.state]);
 
-    const iconFor = { bad: '&#9888;&#65039;', off: '&#9679;', ok: '&#10003;' };
+    const iconFor = { bad: '&#9888;&#65039;', caution: '&#128993;', off: '&#9679;', ok: '&#10003;' };
     const rowsHtml = checks.map((c) =>
       `<div class="chk ${c.state}">
          <span class="ci">${iconFor[c.state]}</span>
@@ -405,6 +409,7 @@
         .chk .ct { color: #374151; }
         .chk .cn { color: #111827; }
         .chk.bad .cn { color: #b91c1c; }
+        .chk.caution .cn { color: #92400e; }
         .chk.ok .ci { color: #16a34a; }
         .chk.off .ci { color: #9ca3af; }
         .chk.off .ct, .chk.off .cn { color: #6b7280; }
